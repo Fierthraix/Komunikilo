@@ -9,7 +9,8 @@ edition = "2021"
 num = "0.4"
 rand = "0.8"
 rand_distr = "0.4"
+itertools = "0.10"
 
 [dev-dependencies]
-itertools = "0.10"
 plotpy = "0.4"
+rayon = "1.7"

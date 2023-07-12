@@ -19,7 +19,7 @@ pub fn rx_baseband_bpsk_signal<I>(message: I) -> impl Iterator<Item = Bit>
 where
     I: Iterator<Item = Complex<f64>>,
 {
-    message.map(|sample| sample.re > 0f64)
+    message.map(|sample| sample.re >= 0f64)
 }
 
 pub fn tx_bpsk_signal<I>(

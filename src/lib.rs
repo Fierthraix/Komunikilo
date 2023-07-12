@@ -8,6 +8,14 @@ mod filters;
 
 pub type Bit = bool;
 
+pub fn db(x: f64) -> f64 {
+    10f64 * x.log10()
+}
+
+pub fn undb(x: f64) -> f64 {
+    10f64.powf(x / 10f64)
+}
+
 pub fn linspace(start: f64, stop: f64, num: usize) -> impl Iterator<Item = f64> {
     let step = (stop - start) / (num as f64);
     (0..num).map(move |i| start + step * (i as f64))
