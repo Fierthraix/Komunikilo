@@ -1,4 +1,4 @@
-use crate::{awgn, bits_to_nrz, inflate, Bit};
+use crate::{bits_to_nrz, inflate, Bit};
 use num::complex::Complex;
 use std::f64::consts::PI;
 

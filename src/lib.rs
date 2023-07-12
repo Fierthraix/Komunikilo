@@ -1,10 +1,11 @@
 use num::complex::Complex;
-use rand::{rngs::ThreadRng, seq::index::sample, Rng};
+use rand::{rngs::ThreadRng, Rng};
 use rand_distr::{Distribution, Normal};
 
 pub mod bpsk;
 mod costas;
 mod filters;
+pub mod qpsk;
 
 pub type Bit = bool;
 
