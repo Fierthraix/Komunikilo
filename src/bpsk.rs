@@ -102,7 +102,7 @@ mod tests {
         let bpsk_tx: Vec<Complex<f64>> =
             tx_baseband_bpsk_signal(data_bits.clone().into_iter()).collect();
 
-        let sigma = 5;
+        let _sigma = 5;
 
         // Add AWGN:
         // rx_signal: Vec<Complex<f64>> = awgn(, )
@@ -122,7 +122,7 @@ mod tests {
         let carrier_freq = 1800_f64;
         // Derived Parameters.
         let samples_per_symbol = samp_rate / symbol_rate;
-        let num_samples = num_bits * samples_per_symbol;
+        let _num_samples = num_bits * samples_per_symbol;
         //let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
 
         // Test proper.
@@ -130,7 +130,7 @@ mod tests {
         let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
         // Tx output.
-        let bpsk_tx = tx_bpsk_signal(
+        let _bpsk_tx = tx_bpsk_signal(
             data_bits.into_iter(),
             samp_rate,
             symbol_rate,

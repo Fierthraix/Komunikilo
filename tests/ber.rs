@@ -1,6 +1,6 @@
 use comms::bpsk::{rx_baseband_bpsk_signal, tx_baseband_bpsk_signal};
 use comms::qpsk::{rx_baseband_qpsk_signal, tx_baseband_qpsk_signal};
-use comms::{awgn, db, erfc, linspace, undb, Bit};
+use comms::{awgn, erfc, linspace, Bit};
 use num::complex::Complex;
 use plotpy::{Curve, Plot};
 use rand::Rng;

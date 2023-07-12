@@ -135,15 +135,15 @@ impl Awgn {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 
     #[test]
     fn it_works() {
         let fs = 44100;
         let baud = 900;
         let Nbits = 4000;
-        let f0 = 1800;
+        let _f0 = 1800;
         let Ns = fs / baud;
-        let N = Nbits * Ns;
+        let _N = Nbits * Ns;
     }
 }
