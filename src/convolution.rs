@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
-use std::iter::Iterator;
+use std::iter::{Iterator, Sum};
+use std::ops::Mul;
 
 pub fn convolve_linear(signal: Vec<f64>, filter: Vec<f64>) -> Vec<f64> {
     let out_len = signal.len() + filter.len() - 1;
@@ -23,27 +24,30 @@ pub fn convolve_linear(signal: Vec<f64>, filter: Vec<f64>) -> Vec<f64> {
     out
 }
 
-pub fn convolve<I>(signal: I, filter: Vec<f64>) -> impl Iterator<Item = f64>
+pub fn convolve<T, I>(signal: I, filter: Vec<T>) -> impl Iterator<Item = T>
 where
-    I: Iterator<Item = f64>,
+    I: Iterator<Item = T>,
+    T: Mul<T, Output = T> + Sum<T> + Copy,
 {
     Convolver::new(signal, filter)
 }
 
-pub struct Convolver<I>
+pub struct Convolver<T, I>
 where
-    I: Iterator<Item = f64>,
+    I: Iterator<Item = T>,
+    T: Mul<T, Output = T> + Sum<T> + Copy,
 {
     source: I,
-    filter: Vec<f64>,
-    buffer: VecDeque<f64>,
+    filter: Vec<T>,
+    buffer: VecDeque<T>,
 }
 
-impl<I> Convolver<I>
+impl<T, I> Convolver<T, I>
 where
-    I: Iterator<Item = f64>,
+    I: Iterator<Item = T>,
+    T: Mul<T, Output = T> + Sum<T> + Copy,
 {
-    pub fn new(source: I, filter: Vec<f64>) -> Convolver<I> {
+    pub fn new(source: I, filter: Vec<T>) -> Convolver<T, I> {
         let filter_len = filter.len();
         Self {
             source,
@@ -52,22 +56,23 @@ where
         }
     }
 
-    fn convolve(&self) -> f64 {
+    fn convolve(&self) -> T {
         self.buffer
             .iter()
             .zip(self.filter.iter().rev())
-            .map(|(buf, filt)| buf * filt)
+            .map(|(&buf, &filt)| buf * filt)
             .sum()
     }
 }
 
-impl<I> Iterator for Convolver<I>
+impl<T, I> Iterator for Convolver<T, I>
 where
-    I: Iterator<Item = f64>,
+    I: Iterator<Item = T>,
+    T: Mul<T, Output = T> + Sum<T> + Copy,
 {
-    type Item = f64;
+    type Item = T;
 
-    fn next(&mut self) -> Option<f64> {
+    fn next(&mut self) -> Option<T> {
         match self.source.next() {
             Some(num) => {
                 // Here is where the convolution happens.
