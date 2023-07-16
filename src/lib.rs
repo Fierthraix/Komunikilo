@@ -3,6 +3,7 @@ use rand::{rngs::ThreadRng, Rng};
 use rand_distr::{Distribution, Normal};
 
 pub mod bpsk;
+mod bufmap;
 mod costas;
 mod filters;
 pub mod qpsk;
@@ -28,6 +29,28 @@ where
     T: Clone,
 {
     input.flat_map(move |item| std::iter::repeat(item).take(rate))
+}
+
+pub fn convolve_linear(signal: Vec<f64>, filter: Vec<f64>) -> Vec<f64> {
+    let out_len = signal.len() + filter.len() - 1;
+    let mut out = Vec::with_capacity(out_len);
+
+    for i in 0..out_len {
+        let mut sum = 0f64;
+        let j_min = if i < filter.len() {
+            0
+        } else {
+            i - filter.len()
+        };
+        for j in j_min..i + 1 {
+            if j < signal.len() && (i - j) < filter.len() {
+                sum += signal[j] * filter[i - j];
+            }
+        }
+        out.push(sum)
+    }
+
+    out
 }
 
 pub fn bits_to_nrz<T>(message: T) -> impl Iterator<Item = f64>
@@ -135,7 +158,7 @@ impl Awgn {
 
 #[cfg(test)]
 mod tests {
-    
+    use crate::convolve_linear;
 
     #[test]
     fn it_works() {
@@ -145,5 +168,25 @@ mod tests {
         let _f0 = 1800;
         let Ns = fs / baud;
         let _N = Nbits * Ns;
+
+        let signal: Vec<f64> = (0..50).map(|x| x.into()).collect();
+        // let signal: Vec<f64> = (0..10).map(|x| x.into()).collect();
+        // let signal: Vec<f64> = (0..50).map(|x| x as f64).collect();
+
+        let filter = vec![1., 1., 1., 1.];
+
+        let convolution = convolve_linear(signal, filter);
+
+        let expected = vec![
+            0., 1., 3., 6., 10., 14., 18., 22., 26., 30., 34., 38., 42., 46., 50., 54., 58., 62.,
+            66., 70., 74., 78., 82., 86., 90., 94., 98., 102., 106., 110., 114., 118., 122., 126.,
+            130., 134., 138., 142., 146., 150., 154., 158., 162., 166., 170., 174., 178., 182.,
+            186., 190., 144., 97., 49.,
+        ];
+
+        // let expected = vec![0., 1., 3., 6., 10., 14., 18., 22., 26., 30., 24., 17., 9.];
+
+        assert_eq!(expected.len(), convolution.len());
+        assert_eq!(expected, convolution);
     }
 }
