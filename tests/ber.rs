@@ -88,8 +88,8 @@ fn bpsk_works() {
 fn qpsk_works() {
     // Make some data.
     let mut rng = rand::thread_rng();
-    // let num_bits = 9001;
-    let num_bits = 100_000_000;
+    let num_bits = 9002;
+    // let num_bits = 100_000_000;
     let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
     // Transmit the signal.

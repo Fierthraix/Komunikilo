@@ -1,5 +1,8 @@
+use crate::convolution::convolve;
 use crate::{bits_to_nrz, inflate, Bit};
+use itertools::Itertools;
 use num::complex::Complex;
+use std::collections::VecDeque;
 use std::f64::consts::PI;
 
 pub fn tx_baseband_bpsk_signal<I>(message: I) -> impl Iterator<Item = Complex<f64>>
@@ -44,7 +47,36 @@ where
         })
 }
 
-pub fn rx_bpsk_signal() {}
+pub fn rx_bpsk_signal<I>(
+    message: I,
+    sample_rate: usize,
+    symbol_rate: usize,
+    carrier_freq: f64,
+    start_time: f64,
+) -> impl Iterator<Item = Bit>
+where
+    I: Iterator<Item = Complex<f64>>,
+{
+    let samples_per_symbol: usize = sample_rate / symbol_rate;
+    let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
+    let filter: Vec<f64> = (0..samples_per_symbol).map(|_| 1f64).collect();
+    let real_demod = message.enumerate().map(move |(idx, sample)| {
+        let time = start_time + (idx as f64) * t_step;
+        let received = sample * (2_f64 * PI * carrier_freq * time).cos();
+        received.re
+    });
+    convolve(real_demod, filter)
+        .enumerate()
+        // Take every `samples_per_symbol`th output from this threshold detector.
+        .filter_map(move |(i, val)| {
+            if i % samples_per_symbol == 0 {
+                Some(val)
+            } else {
+                None
+            }
+        })
+        .map(|thresh_val| thresh_val > 0f64)
+}
 
 /*
 pub struct BpskTransmitter {
@@ -79,6 +111,7 @@ mod tests {
     extern crate rand;
     extern crate rand_distr;
     use crate::bpsk::tests::rand::Rng;
+    use plotpy::{Curve, Plot};
 
     #[test]
     fn basic_baseband() {
@@ -113,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn it_works() {
+    fn full_bpsk() {
         // Simulation parameters.
         let num_bits = 4000; // How many bits to transmit overall.
                              // Input parameters.
@@ -130,12 +163,40 @@ mod tests {
         let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
         // Tx output.
-        let _bpsk_tx = tx_bpsk_signal(
-            data_bits.into_iter(),
+        let bpsk_tx: Vec<Complex<f64>> = tx_bpsk_signal(
+            data_bits.clone().into_iter(),
             samp_rate,
             symbol_rate,
             carrier_freq,
             0_f64,
-        );
+        )
+        .collect();
+
+        let bpsk_rx: Vec<Bit> = rx_bpsk_signal(
+            bpsk_tx.clone().into_iter(),
+            samp_rate,
+            symbol_rate,
+            carrier_freq,
+            0_f64,
+        )
+        .skip(1)
+        .collect();
+
+        let samples_per_symbol: usize = samp_rate / symbol_rate;
+        let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
+
+        let x =
+            |y: &Vec<f64>| -> Vec<f64> { (0..y.len()).map(|idx| idx as f64 * t_step).collect() };
+
+        let bpsk_tx: Vec<f64> = bpsk_tx.into_iter().map(|num| num.re).collect();
+        let mut curve_tx = Curve::new();
+        curve_tx.draw(&x(&bpsk_tx), &bpsk_tx);
+
+        let mut plot_tx = Plot::new();
+        plot_tx.add(&curve_tx);
+
+        // plot_tx.save("/tmp/bpsk_tx.png").unwrap();
+
+        assert_eq!(bpsk_rx, data_bits);
     }
 }
