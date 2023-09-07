@@ -1,8 +1,11 @@
 use comms::bpsk::{
     rx_baseband_bpsk_signal, rx_bpsk_signal, tx_baseband_bpsk_signal, tx_bpsk_signal,
 };
-use comms::Bit;
+use comms::{awgn, Bit};
 use plotpy::{Curve, Plot};
+
+#[macro_use]
+mod util;
 
 #[test]
 fn bpsk_graphs() {
@@ -16,13 +19,18 @@ fn bpsk_graphs() {
     let carrier_freq = 1800_f64;
 
     let tx: Vec<f64> = tx_bpsk_signal(
-        data.clone().into_iter(),
+        data.iter().cloned(),
         samp_rate,
         symbol_rate,
         carrier_freq,
         0f64,
     )
     .collect();
+
+    let rx: Vec<Bit> = rx_bpswk_signal(tx.iter().cloned())
+
+    let sigma = 2f64;
+    let noisy_signal: Vec<f64> = awgn(tx.iter().cloned(), sigma).collect();
 
     let t: Vec<f64> = (0..tx.len())
         .into_iter()
@@ -32,11 +40,6 @@ fn bpsk_graphs() {
         })
         .collect();
 
-    let mut c1 = Curve::new();
-    let mut p1 = Plot::new();
-
-    c1.draw(&t, &tx);
-    p1.add(&c1);
-
-    p1.save("/tmp/bpsk_tx.png").unwrap();
+    plot!(t, tx, "/tmp/bpsk_tx.png");
+    plot!(t, noisy_signal, "/tmp/bpsk_tx_awgn.png");
 }

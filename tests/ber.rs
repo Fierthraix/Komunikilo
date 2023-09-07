@@ -8,6 +8,9 @@ use plotpy::{Curve, Plot};
 use rand::Rng;
 use rayon::prelude::*;
 
+#[macro_use]
+mod util;
+
 fn ber_bpsk(eb_no: f64) -> f64 {
     0.5 * erfc(eb_no.sqrt())
 }
@@ -31,7 +34,7 @@ fn a_graph() {
     let mut plot = Plot::new();
     plot.add(&curve1);
     plot.add(&curve2);
-    // plot.save("/tmp/asdf.svg").unwrap();
+    plot!(x, y1, y2, "/tmp/asdf.svg");
 }
 
 #[test]
@@ -44,8 +47,7 @@ fn baseband_bpsk_works() {
     let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
     // Transmit the signal.
-    let bpsk_tx: Vec<Complex<f64>> =
-        tx_baseband_bpsk_signal(data_bits.clone().into_iter()).collect();
+    let bpsk_tx: Vec<Complex<f64>> = tx_baseband_bpsk_signal(data_bits.iter().cloned()).collect();
 
     // An x-axis for plotting Eb/N0.
     let xmin = f64::MIN_POSITIVE;
@@ -57,7 +59,7 @@ fn baseband_bpsk_works() {
         .par_iter()
         .map(|&i| {
             let sigma = (1f64 / (2f64 * i as f64)).sqrt();
-            let noisy_signal = awgn_complex(bpsk_tx.clone().into_iter(), sigma);
+            let noisy_signal = awgn_complex(bpsk_tx.iter().cloned(), sigma);
             let rx = rx_baseband_bpsk_signal(noisy_signal);
 
             rx.zip(data_bits.iter())
@@ -81,8 +83,7 @@ fn baseband_bpsk_works() {
 
     plot.save("/tmp/ber_baseband_bpsk.png").unwrap();
 
-    let bpsk_rx: Vec<Bit> =
-        rx_baseband_bpsk_signal(bpsk_tx.clone().into_iter()).collect::<Vec<_>>();
+    let bpsk_rx: Vec<Bit> = rx_baseband_bpsk_signal(bpsk_tx.iter().cloned()).collect::<Vec<_>>();
     assert_eq!(data_bits, bpsk_rx);
 }
 
@@ -95,8 +96,7 @@ fn baseband_qpsk_works() {
     let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
     // Transmit the signal.
-    let qpsk_tx: Vec<Complex<f64>> =
-        tx_baseband_qpsk_signal(data_bits.clone().into_iter()).collect();
+    let qpsk_tx: Vec<Complex<f64>> = tx_baseband_qpsk_signal(data_bits.iter().cloned()).collect();
 
     // An x-axis for plotting Eb/N0.
     let xmin = f64::MIN_POSITIVE;
@@ -108,8 +108,8 @@ fn baseband_qpsk_works() {
         .par_iter()
         .map(|&i| {
             let sigma = (1f64 / (i as f64)).sqrt();
-            // let noisy_signal = awgn_complex(qpsk_tx.clone().into_iter(), sigma);
-            let noisy_signal = awgn_complex(qpsk_tx.clone().into_iter(), sigma);
+            // let noisy_signal = awgn_complex(qpsk_tx.iter().cloned(), sigma);
+            let noisy_signal = awgn_complex(qpsk_tx.iter().cloned(), sigma);
             let rx = rx_baseband_qpsk_signal(noisy_signal);
 
             rx.zip(data_bits.iter())
@@ -133,8 +133,7 @@ fn baseband_qpsk_works() {
 
     plot.save("/tmp/ber_baseband_qpsk.png").unwrap();
 
-    let qpsk_rx: Vec<Bit> =
-        rx_baseband_qpsk_signal(qpsk_tx.clone().into_iter()).collect::<Vec<_>>();
+    let qpsk_rx: Vec<Bit> = rx_baseband_qpsk_signal(qpsk_tx.iter().cloned()).collect::<Vec<_>>();
     assert_eq!(data_bits, qpsk_rx);
 }
 
@@ -156,7 +155,7 @@ fn basic_bpsk_works() {
 
     // Tx output.
     let bpsk_tx: Vec<f64> = tx_bpsk_signal(
-        data_bits.clone().into_iter(),
+        data_bits.iter().cloned(),
         samp_rate,
         symbol_rate,
         carrier_freq,
@@ -166,13 +165,13 @@ fn basic_bpsk_works() {
 
     // Check if the rx is off on the data bits by some constant amount.
 
-    let EbN0 = 0.01;
-    let sigma = (1f64 / (2f64 * EbN0)).sqrt();
-    // let noisy_signal = awgn(bpsk_tx.clone().into_iter(), sigma);
-    let noisy_signal = awgn(bpsk_tx.clone().into_iter(), EbN0);
+    let eb_n0 = 0.01;
+    let sigma = (1f64 / (2f64 * eb_n0)).sqrt();
+    // let noisy_signal = awgn(bpsk_tx.iter().cloned(), sigma);
+    let noisy_signal = awgn(bpsk_tx.iter().cloned(), eb_n0);
 
     let rx: Vec<Bit> = rx_bpsk_signal(
-        // bpsk_tx.clone().into_iter(),
+        // bpsk_tx.iter().cloned(),
         noisy_signal,
         samp_rate,
         symbol_rate,
@@ -189,8 +188,8 @@ fn basic_bpsk_works() {
         .sum::<f64>()
         / rx.len() as f64;
     println!("Correct RX: {}%", percent_correct * 100f64);
-    println!("Eb/N0: {} || BER {}", EbN0, 1f64 - percent_correct);
-    println!("Theory BER: {} || {}", ber_bpsk(EbN0), ber_bpsk(sigma));
+    println!("Eb/N0: {} || BER {}", eb_n0, 1f64 - percent_correct);
+    println!("Theory BER: {} || {}", ber_bpsk(eb_n0), ber_bpsk(sigma));
     println!(
         "tx ({}): {:?}",
         data_bits.len(),
@@ -223,7 +222,7 @@ fn bpsk_works() {
 
     // Tx output.
     let bpsk_tx: Vec<f64> = tx_bpsk_signal(
-        data_bits.clone().into_iter(),
+        data_bits.iter().cloned(),
         samp_rate,
         symbol_rate,
         carrier_freq,
@@ -238,7 +237,7 @@ fn bpsk_works() {
             // let sigma = (7.95f64 / (2f64 * i as f64)).sqrt();
             // let sigma = (1f64 / (2f64 * i as f64)).sqrt();
             let sigma = 7f64 / (2f64 * i);
-            let noisy_signal = awgn(bpsk_tx.clone().into_iter(), sigma);
+            let noisy_signal = awgn(bpsk_tx.iter().cloned(), sigma);
             let rx = rx_bpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq, 0_f64);
 
             rx.zip(data_bits.iter())
@@ -255,10 +254,5 @@ fn bpsk_works() {
     let mut curve_theory = Curve::new();
     curve_theory.draw(&x, &y_theory);
 
-    let mut plot = Plot::new();
-    plot.add(&curve_practice);
-    plot.add(&curve_theory);
-    plot.set_log_y(true);
-
-    plot.save("/tmp/ber_bpsk.png").unwrap();
+    ber_plot!(x, y, y_theory, "/tmp/ber_bpsk.png");
 }

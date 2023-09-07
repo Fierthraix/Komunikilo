@@ -6,6 +6,9 @@ use num::complex::Complex;
 use plotpy::{Curve, Plot};
 use std::f64::consts::PI;
 
+#[macro_use]
+mod util;
+
 #[test]
 fn basic_math() {
     let time_step = 0.01;
@@ -26,19 +29,8 @@ fn basic_math() {
 
     let x: Vec<f64> = (0..a.len()).map(|num| num as f64).collect();
 
-    let mut c1 = Curve::new();
-    let mut c2 = Curve::new();
-    let mut p1 = Plot::new();
-    let mut p2 = Plot::new();
-
-    c1.draw(&x, &a);
-    c2.draw(&x, &b);
-    p1.add(&c1);
-    p2.add(&c2);
-
-    p1.save("/tmp/1_t.png").unwrap();
-    p2.save("/tmp/2_t.png").unwrap();
-
+    plot!(x, a, "/tmp/1_t.png");
+    plot!(x, b, "/tmp/2_t.png");
     // assert!(false);
 }
 
@@ -58,17 +50,10 @@ fn qpsk_graphs() {
     // let fc = 100;
     let fc = 1800_f64;
     let symb_rate = 900;
-    let tx: Vec<f64> = tx_qpsk_signal(
-        data.clone().into_iter(),
-        samp_rate,
-        symb_rate,
-        fc as f64,
-        0f64,
-    )
-    .collect();
+    let tx: Vec<f64> =
+        tx_qpsk_signal(data.iter().cloned(), samp_rate, symb_rate, fc as f64, 0f64).collect();
 
-    let rx: Vec<Bit> =
-        rx_qpsk_signal(tx.clone().into_iter(), samp_rate, symb_rate, fc, 0f64).collect();
+    let rx: Vec<Bit> = rx_qpsk_signal(tx.iter().cloned(), samp_rate, symb_rate, fc, 0f64).collect();
 
     let xtx: Vec<f64> = linspace(0f64, 1f64, tx.len()).collect();
     let xrx: Vec<f64> = linspace(0f64, 1f64, rx.len()).collect();
@@ -77,7 +62,7 @@ fn qpsk_graphs() {
     let mut c = Curve::new();
     c.draw(
         &xd,
-        &data.clone().into_iter().map(bit_to_nrz).collect::<Vec<_>>(),
+        &data.iter().cloned().map(bit_to_nrz).collect::<Vec<_>>(),
     );
     let mut p = Plot::new();
     p.add(&c);
@@ -86,7 +71,7 @@ fn qpsk_graphs() {
     let mut c = Curve::new();
     c.draw(
         &xrx,
-        &rx.clone().into_iter().map(bit_to_nrz).collect::<Vec<_>>(),
+        &rx.iter().cloned().map(bit_to_nrz).collect::<Vec<_>>(),
     );
     let mut p = Plot::new();
     p.add(&c);
