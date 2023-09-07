@@ -1,11 +1,9 @@
 use comms::qpsk::{
     rx_baseband_qpsk_signal, rx_qpsk_signal, tx_baseband_qpsk_signal, tx_qpsk_signal,
 };
-use comms::{awgn, bit_to_nrz, erfc, inflate, linspace, Bit};
+use comms::{bit_to_nrz, inflate, linspace, Bit};
 use num::complex::Complex;
 use plotpy::{Curve, Plot};
-use rand::Rng;
-use rayon::prelude::*;
 use std::f64::consts::PI;
 
 #[test]

@@ -1,12 +1,8 @@
 use comms::bpsk::{
     rx_baseband_bpsk_signal, rx_bpsk_signal, tx_baseband_bpsk_signal, tx_bpsk_signal,
 };
-use comms::qpsk::{rx_baseband_qpsk_signal, tx_baseband_qpsk_signal};
-use comms::{awgn, erfc, linspace, Bit};
-use num::complex::Complex;
+use comms::Bit;
 use plotpy::{Curve, Plot};
-use rand::Rng;
-use rayon::prelude::*;
 
 #[test]
 fn bpsk_graphs() {

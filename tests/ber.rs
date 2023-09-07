@@ -150,8 +150,8 @@ fn basic_bpsk_works() {
     let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
     // An x-axis for plotting Eb/N0.
-    let xmin = f64::MIN_POSITIVE;
-    let xmax = 15f64;
+    // let xmin = f64::MIN_POSITIVE;
+    // let xmax = 15f64;
 
     // Tx output.
     let bpsk_tx: Vec<Complex<f64>> = tx_bpsk_signal(
@@ -236,7 +236,7 @@ fn bpsk_works() {
         .map(|&i| {
             // let sigma = (7.95f64 / (2f64 * i as f64)).sqrt();
             // let sigma = (1f64 / (2f64 * i as f64)).sqrt();
-            let sigma = (7f64 / (2f64 * i));
+            let sigma = 7f64 / (2f64 * i);
             let noisy_signal = awgn(bpsk_tx.clone().into_iter(), sigma);
             let rx = rx_bpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq, 0_f64);
 
