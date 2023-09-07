@@ -1,8 +1,6 @@
 use crate::convolution::convolve;
 use crate::{bits_to_nrz, inflate, Bit};
-use itertools::Itertools;
 use num::complex::Complex;
-use std::collections::VecDeque;
 use std::f64::consts::PI;
 
 pub fn tx_baseband_bpsk_signal<I>(message: I) -> impl Iterator<Item = Complex<f64>>
@@ -67,7 +65,6 @@ where
     });
     convolve(real_demod, filter)
         .enumerate()
-        // Take every `samples_per_symbol`th output from this threshold detector.
         .filter_map(move |(i, val)| {
             if i % samples_per_symbol == 0 {
                 Some(val)
@@ -76,32 +73,9 @@ where
             }
         })
         .map(|thresh_val| thresh_val > 0f64)
+        .skip(1)
+    // Take every `samples_per_symbol`th output from this threshold detector.
 }
-
-/*
-pub struct BpskTransmitter {
-    sample_rate: usize,
-    symbol_rate: usize,
-    carrier_freq: f64,
-}
-impl BpskTransmitter {
-    pub fn message_to_signal<T>(&self, message: T, start_time: f64) -> impl Iterator<Item = f64>
-    where
-        T: Iterator<Item = Bit>,
-    {
-        let samples_per_symbol: usize = self.sample_rate / self.symbol_rate;
-        let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
-
-        // Message Pipeline.
-        message
-            // Convert bits to line values, and inflate to time sample rate.
-            .flat_map(move |bit| BpskSymbol::from(bit).line_values(samples_per_symbol))
-    }
-}
-pub fn message_to_bpsk_signal<T>(message: T) -> impl Iterator<Item = f64> {
-
-}
-*/
 
 #[cfg(test)]
 mod tests {
@@ -114,19 +88,6 @@ mod tests {
     use plotpy::{Curve, Plot};
 
     #[test]
-    fn basic_baseband() {
-        let mut rng = rand::thread_rng();
-        let num_bits = 9001;
-        let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
-
-        let bpsk_tx: Vec<Complex<f64>> =
-            tx_baseband_bpsk_signal(data_bits.clone().into_iter()).collect();
-        let bpsk_rx: Vec<Bit> =
-            rx_baseband_bpsk_signal(bpsk_tx.clone().into_iter()).collect::<Vec<_>>();
-        assert_eq!(data_bits, bpsk_rx);
-    }
-
-    #[test]
     fn baseband() {
         let mut rng = rand::thread_rng();
         let num_bits = 9001;
@@ -134,12 +95,6 @@ mod tests {
 
         let bpsk_tx: Vec<Complex<f64>> =
             tx_baseband_bpsk_signal(data_bits.clone().into_iter()).collect();
-
-        let _sigma = 5;
-
-        // Add AWGN:
-        // rx_signal: Vec<Complex<f64>> = awgn(, )
-
         let bpsk_rx: Vec<Bit> =
             rx_baseband_bpsk_signal(bpsk_tx.clone().into_iter()).collect::<Vec<_>>();
         assert_eq!(data_bits, bpsk_rx);
@@ -179,7 +134,6 @@ mod tests {
             carrier_freq,
             0_f64,
         )
-        .skip(1)
         .collect();
 
         let samples_per_symbol: usize = samp_rate / symbol_rate;
@@ -195,7 +149,8 @@ mod tests {
         let mut plot_tx = Plot::new();
         plot_tx.add(&curve_tx);
 
-        // plot_tx.save("/tmp/bpsk_tx.png").unwrap();
+        // TODO: Add AWGN to graphic.
+        plot_tx.save("/tmp/bpsk_tx.png").unwrap();
 
         assert_eq!(bpsk_rx, data_bits);
     }
