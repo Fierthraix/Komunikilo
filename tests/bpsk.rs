@@ -22,7 +22,6 @@ fn bpsk_graphs() {
         carrier_freq,
         0f64,
     )
-    .map(|num| num.re)
     .collect();
 
     let t: Vec<f64> = (0..tx.len())

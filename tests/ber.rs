@@ -2,7 +2,7 @@ use comms::bpsk::{
     rx_baseband_bpsk_signal, rx_bpsk_signal, tx_baseband_bpsk_signal, tx_bpsk_signal,
 };
 use comms::qpsk::{rx_baseband_qpsk_signal, tx_baseband_qpsk_signal};
-use comms::{awgn, erfc, linspace, Bit};
+use comms::{awgn, awgn_complex, erfc, linspace, Bit};
 use num::complex::Complex;
 use plotpy::{Curve, Plot};
 use rand::Rng;
@@ -57,7 +57,7 @@ fn baseband_bpsk_works() {
         .par_iter()
         .map(|&i| {
             let sigma = (1f64 / (2f64 * i as f64)).sqrt();
-            let noisy_signal = awgn(bpsk_tx.clone().into_iter(), sigma);
+            let noisy_signal = awgn_complex(bpsk_tx.clone().into_iter(), sigma);
             let rx = rx_baseband_bpsk_signal(noisy_signal);
 
             rx.zip(data_bits.iter())
@@ -108,7 +108,8 @@ fn baseband_qpsk_works() {
         .par_iter()
         .map(|&i| {
             let sigma = (1f64 / (i as f64)).sqrt();
-            let noisy_signal = awgn(qpsk_tx.clone().into_iter(), sigma);
+            // let noisy_signal = awgn_complex(qpsk_tx.clone().into_iter(), sigma);
+            let noisy_signal = awgn_complex(qpsk_tx.clone().into_iter(), sigma);
             let rx = rx_baseband_qpsk_signal(noisy_signal);
 
             rx.zip(data_bits.iter())
@@ -154,7 +155,7 @@ fn basic_bpsk_works() {
     // let xmax = 15f64;
 
     // Tx output.
-    let bpsk_tx: Vec<Complex<f64>> = tx_bpsk_signal(
+    let bpsk_tx: Vec<f64> = tx_bpsk_signal(
         data_bits.clone().into_iter(),
         samp_rate,
         symbol_rate,
@@ -221,7 +222,7 @@ fn bpsk_works() {
     let x: Vec<f64> = linspace(xmin, xmax, 100).collect();
 
     // Tx output.
-    let bpsk_tx: Vec<Complex<f64>> = tx_bpsk_signal(
+    let bpsk_tx: Vec<f64> = tx_bpsk_signal(
         data_bits.clone().into_iter(),
         samp_rate,
         symbol_rate,

@@ -29,7 +29,7 @@ pub fn tx_qpsk_signal<I>(
     symbol_rate: usize,
     carrier_freq: f64,
     start_time: f64,
-) -> impl Iterator<Item = Complex<f64>>
+) -> impl Iterator<Item = f64>
 where
     I: Iterator<Item = Bit>,
 {
@@ -43,7 +43,7 @@ where
             let i_t = bit_to_nrz(bit1) * (2f64 * PI * carrier_freq * time).cos();
             let q_t = -bit_to_nrz(bit2) * (2f64 * PI * carrier_freq * time).sin();
 
-            Complex::<f64>::new(i_t + q_t, 0f64)
+            i_t + q_t
         })
 }
 
@@ -55,7 +55,7 @@ pub fn rx_qpsk_signal<I>(
     start_time: f64,
 ) -> impl Iterator<Item = Bit>
 where
-    I: Iterator<Item = Complex<f64>>,
+    I: Iterator<Item = f64>,
 {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
@@ -67,7 +67,7 @@ where
         let ii = sample * (2_f64 * PI * carrier_freq * time).cos();
         let qi = sample * -(2_f64 * PI * carrier_freq * time).sin();
 
-        (ii.re, qi.re)
+        (ii, qi)
     });
 
     convolve2(real_demod, filter)

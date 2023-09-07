@@ -58,7 +58,7 @@ fn qpsk_graphs() {
     // let fc = 100;
     let fc = 1800_f64;
     let symb_rate = 900;
-    let tx: Vec<Complex<f64>> = tx_qpsk_signal(
+    let tx: Vec<f64> = tx_qpsk_signal(
         data.clone().into_iter(),
         samp_rate,
         symb_rate,
@@ -70,13 +70,8 @@ fn qpsk_graphs() {
     let rx: Vec<Bit> =
         rx_qpsk_signal(tx.clone().into_iter(), samp_rate, symb_rate, fc, 0f64).collect();
 
-    let (i, q): (Vec<f64>, Vec<f64>) = tx
-        .clone()
-        .into_iter()
-        .map(|cmplx_num| (cmplx_num.re, cmplx_num.im))
-        .unzip();
-
-    let x: Vec<f64> = linspace(0f64, 1f64, i.len()).collect();
+    let xtx: Vec<f64> = linspace(0f64, 1f64, tx.len()).collect();
+    let xrx: Vec<f64> = linspace(0f64, 1f64, rx.len()).collect();
     let xd: Vec<f64> = linspace(0f64, data.len() as f64, data.len()).collect();
 
     let mut c = Curve::new();
@@ -89,7 +84,6 @@ fn qpsk_graphs() {
     p.save("/tmp/d_t.png").unwrap();
 
     let mut c = Curve::new();
-    let xrx: Vec<f64> = linspace(0f64, 1f64, rx.len()).collect();
     c.draw(
         &xrx,
         &rx.clone().into_iter().map(bit_to_nrz).collect::<Vec<_>>(),
@@ -99,18 +93,10 @@ fn qpsk_graphs() {
     p.save("/tmp/rx_t.png").unwrap();
 
     let mut c = Curve::new();
-    c.draw(&x, &i);
+    c.draw(&xtx, &tx);
     let mut p = Plot::new();
     p.add(&c);
-    p.save("/tmp/i_t.png").unwrap();
-
-    let mut c = Curve::new();
-    c.draw(&x, &q);
-    let mut p = Plot::new();
-    p.add(&c);
-    p.save("/tmp/q_t.png").unwrap();
-
-    // assert!(false);
+    p.save("/tmp/tx_t.png").unwrap();
 
     assert_eq!(rx, data);
 }

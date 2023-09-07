@@ -79,9 +79,24 @@ where
 }
 */
 
-pub fn awgn<I>(signal: I, sigma: f64) -> impl Iterator<Item = Complex<f64>>
+pub fn awgn_complex<I>(signal: I, sigma: f64) -> impl Iterator<Item = Complex<f64>>
 where
     I: Iterator<Item = Complex<f64>>,
+{
+    // let mut rng = rand::thread_rng();
+    // let dist = Normal::new(0f64, sigma).unwrap();
+    signal
+        .zip(
+            Normal::new(0f64, sigma)
+                .unwrap()
+                .sample_iter(rand::thread_rng()),
+        )
+        .map(|(sample, noise)| sample + noise)
+}
+
+pub fn awgn<I>(signal: I, sigma: f64) -> impl Iterator<Item = f64>
+where
+    I: Iterator<Item = f64>,
 {
     // let mut rng = rand::thread_rng();
     // let dist = Normal::new(0f64, sigma).unwrap();
