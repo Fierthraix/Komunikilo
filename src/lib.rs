@@ -83,8 +83,6 @@ pub fn awgn_complex<I>(signal: I, sigma: f64) -> impl Iterator<Item = Complex<f6
 where
     I: Iterator<Item = Complex<f64>>,
 {
-    // let mut rng = rand::thread_rng();
-    // let dist = Normal::new(0f64, sigma).unwrap();
     signal
         .zip(
             Normal::new(0f64, sigma)
@@ -98,8 +96,6 @@ pub fn awgn<I>(signal: I, sigma: f64) -> impl Iterator<Item = f64>
 where
     I: Iterator<Item = f64>,
 {
-    // let mut rng = rand::thread_rng();
-    // let dist = Normal::new(0f64, sigma).unwrap();
     signal
         .zip(
             Normal::new(0f64, sigma)

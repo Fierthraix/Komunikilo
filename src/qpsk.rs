@@ -100,9 +100,9 @@ mod tests {
         let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
         let qpsk_tx: Vec<Complex<f64>> =
-            tx_baseband_qpsk_signal(data_bits.clone().into_iter()).collect();
+            tx_baseband_qpsk_signal(data_bits.iter().cloned()).collect();
 
-        let qpsk_rx: Vec<Bit> = rx_baseband_qpsk_signal(qpsk_tx.clone().into_iter()).collect();
+        let qpsk_rx: Vec<Bit> = rx_baseband_qpsk_signal(qpsk_tx.iter().cloned()).collect();
 
         assert_eq!(data_bits, qpsk_rx);
     }

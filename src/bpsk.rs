@@ -93,9 +93,8 @@ mod tests {
         let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
         let bpsk_tx: Vec<Complex<f64>> =
-            tx_baseband_bpsk_signal(data_bits.clone().into_iter()).collect();
-        let bpsk_rx: Vec<Bit> =
-            rx_baseband_bpsk_signal(bpsk_tx.clone().into_iter()).collect::<Vec<_>>();
+            tx_baseband_bpsk_signal(data_bits.iter().cloned()).collect();
+        let bpsk_rx: Vec<Bit> = rx_baseband_bpsk_signal(bpsk_tx.iter().cloned()).collect();
         assert_eq!(data_bits, bpsk_rx);
     }
 
@@ -118,7 +117,7 @@ mod tests {
 
         // Tx output.
         let bpsk_tx: Vec<f64> = tx_bpsk_signal(
-            data_bits.clone().into_iter(),
+            data_bits.iter().cloned(),
             samp_rate,
             symbol_rate,
             carrier_freq,
@@ -127,7 +126,7 @@ mod tests {
         .collect();
 
         let bpsk_rx: Vec<Bit> = rx_bpsk_signal(
-            bpsk_tx.clone().into_iter(),
+            bpsk_tx.iter().cloned(),
             samp_rate,
             symbol_rate,
             carrier_freq,
