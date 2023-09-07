@@ -1,5 +1,5 @@
 use num::complex::Complex;
-use rand::{rngs::ThreadRng, Rng};
+use rand::rngs::ThreadRng;
 use rand_distr::{Distribution, Normal};
 
 pub mod bpsk;
@@ -32,11 +32,19 @@ where
     input.flat_map(move |item| std::iter::repeat(item).take(rate))
 }
 
+pub fn bit_to_nrz(bit: Bit) -> f64 {
+    if bit {
+        1_f64
+    } else {
+        -1_f64
+    }
+}
+
 pub fn bits_to_nrz<T>(message: T) -> impl Iterator<Item = f64>
 where
     T: Iterator<Item = Bit>,
 {
-    message.map(|bit| if bit { 1_f64 } else { -1_f64 }) // Convert bits to NRZ values.
+    message.map(bit_to_nrz) // Convert bits to NRZ values.
 }
 
 /*
@@ -141,9 +149,9 @@ mod tests {
     fn it_works() {
         let fs = 44100;
         let baud = 900;
-        let Nbits = 4000;
+        let nbits = 4000;
         let _f0 = 1800;
-        let Ns = fs / baud;
-        let _N = Nbits * Ns;
+        let ns = fs / baud;
+        let _n = nbits * ns;
     }
 }

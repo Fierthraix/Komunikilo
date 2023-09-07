@@ -1,20 +1,20 @@
 use std::f64::consts::PI;
 
 pub fn rrcosfilter(taps: usize, beta: f64, symbol_length: f64, samp_rate: f64) -> Vec<f64> {
-    let Ts = symbol_length;
+    let ts = symbol_length;
     (0..taps)
         .map(|i| {
             let t = ((i as f64) - (taps as f64) / 2f64) / samp_rate;
             if t == 0f64 {
-                1f64 / Ts + beta * (4f64 / PI - 1f64)
-            } else if beta != 0f64 && (t == Ts / (2f64 * beta) || Ts == -Ts / (2f64 * beta)) {
-                beta / (Ts * 2f64.sqrt())
+                1f64 / ts + beta * (4f64 / PI - 1f64)
+            } else if beta != 0f64 && (t == ts / (2f64 * beta) || ts == -ts / (2f64 * beta)) {
+                beta / (ts * 2f64.sqrt())
                     * ((1f64 + 2f64 / PI) * (PI / (4f64 * beta)).sin()
                         + (1f64 - 2f64 / PI) * (PI / (4f64 * beta)).cos())
             } else {
-                ((1f64 / Ts) * (PI * t / Ts * (1f64 - beta)).sin()
-                    + 4f64 * beta * t / Ts * (PI * t / Ts * (1f64 + beta)).cos())
-                    / (PI * t / Ts * (1f64 - (4f64 * beta * t / Ts).powi(2)))
+                ((1f64 / ts) * (PI * t / ts * (1f64 - beta)).sin()
+                    + 4f64 * beta * t / ts * (PI * t / ts * (1f64 + beta)).cos())
+                    / (PI * t / ts * (1f64 - (4f64 * beta * t / ts).powi(2)))
             }
         })
         .collect()
@@ -150,9 +150,9 @@ mod tests {
     fn it_works() {
         let fs = 44100;
         let baud = 900;
-        let Nbits = 4000;
+        let nbits = 4000;
         let _f0 = 1800;
-        let Ns = fs / baud;
-        let _N = Nbits * Ns;
+        let ns = fs / baud;
+        let _n = nbits * ns;
     }
 }
