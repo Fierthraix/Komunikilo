@@ -27,13 +27,6 @@ fn a_graph() {
     let y1: Vec<f64> = x.iter().map(|&x| ber_bpsk(x)).collect();
     let y2: Vec<f64> = x.iter().map(|&x| erfc(x)).collect();
 
-    let mut curve1 = Curve::new();
-    let mut curve2 = Curve::new();
-    curve1.draw(&x, &y1);
-    curve2.draw(&x, &y2);
-    let mut plot = Plot::new();
-    plot.add(&curve1);
-    plot.add(&curve2);
     plot!(x, y1, y2, "/tmp/asdf.svg");
 }
 
@@ -71,19 +64,9 @@ fn baseband_bpsk_works() {
 
     let y_theory: Vec<f64> = x.iter().map(|&x| ber_bpsk(x)).collect();
 
-    let mut curve_practice = Curve::new();
-    curve_practice.draw(&x, &y);
-    let mut curve_theory = Curve::new();
-    curve_theory.draw(&x, &y_theory);
+    ber_plot!(x, y, y_theory, "/tmp/ber_baseband_bpsk.png");
 
-    let mut plot = Plot::new();
-    plot.add(&curve_practice);
-    plot.add(&curve_theory);
-    plot.set_log_y(true);
-
-    plot.save("/tmp/ber_baseband_bpsk.png").unwrap();
-
-    let bpsk_rx: Vec<Bit> = rx_baseband_bpsk_signal(bpsk_tx.iter().cloned()).collect::<Vec<_>>();
+    let bpsk_rx: Vec<Bit> = rx_baseband_bpsk_signal(bpsk_tx.iter().cloned()).collect();
     assert_eq!(data_bits, bpsk_rx);
 }
 
@@ -121,19 +104,9 @@ fn baseband_qpsk_works() {
 
     let y_theory: Vec<f64> = x.iter().map(|&x| ber_qpsk(x)).collect();
 
-    let mut curve_practice = Curve::new();
-    curve_practice.draw(&x, &y);
-    let mut curve_theory = Curve::new();
-    curve_theory.draw(&x, &y_theory);
+    plot!(x, y, y_theory, "/tmp/ber_baseband_qpsk.png");
 
-    let mut plot = Plot::new();
-    plot.add(&curve_practice);
-    plot.add(&curve_theory);
-    plot.set_log_y(true);
-
-    plot.save("/tmp/ber_baseband_qpsk.png").unwrap();
-
-    let qpsk_rx: Vec<Bit> = rx_baseband_qpsk_signal(qpsk_tx.iter().cloned()).collect::<Vec<_>>();
+    let qpsk_rx: Vec<Bit> = rx_baseband_qpsk_signal(qpsk_tx.iter().cloned()).collect();
     assert_eq!(data_bits, qpsk_rx);
 }
 

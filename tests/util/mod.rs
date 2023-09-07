@@ -27,3 +27,15 @@ macro_rules! ber_plot {
         plot!($x, $y1, $y2, true, $name)
     };
 }
+
+macro_rules! error {
+    ($thing1:expr, $thing2:expr) => {
+        $thing1
+            .iter()
+            .cloned()
+            .zip($thing2.iter().cloned())
+            .map(|(t1, t2)| if t1 == t2 { 0f64 } else { 1f64 })
+            .sum::<f64>()
+            / $thing1.len() as f64
+    };
+}

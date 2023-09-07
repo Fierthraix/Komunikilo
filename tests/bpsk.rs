@@ -27,10 +27,26 @@ fn bpsk_graphs() {
     )
     .collect();
 
-    let rx: Vec<Bit> = rx_bpswk_signal(tx.iter().cloned())
+    let rx_clean: Vec<Bit> = rx_bpsk_signal(
+        tx.iter().cloned(),
+        samp_rate,
+        symbol_rate,
+        carrier_freq,
+        0f64,
+    )
+    .collect();
 
     let sigma = 2f64;
     let noisy_signal: Vec<f64> = awgn(tx.iter().cloned(), sigma).collect();
+
+    let rx_dirty: Vec<Bit> = rx_bpsk_signal(
+        noisy_signal.iter().cloned(),
+        samp_rate,
+        symbol_rate,
+        carrier_freq,
+        0f64,
+    )
+    .collect();
 
     let t: Vec<f64> = (0..tx.len())
         .into_iter()
@@ -41,5 +57,9 @@ fn bpsk_graphs() {
         .collect();
 
     plot!(t, tx, "/tmp/bpsk_tx.png");
-    plot!(t, noisy_signal, "/tmp/bpsk_tx_awgn.png");
+    plot!(t, tx, noisy_signal, "/tmp/bpsk_tx_awgn.png");
+    // plot!(t, rx_clean, rx_dirty, "/tmp/bpsk_rx_awgn.png");
+    println!("ERROR: {}", error!(rx_clean, rx_dirty));
+    assert!(error!(rx_clean, rx_dirty) <= 0.2);
+    // assert_eq!(rx_clean, rx_dirty);
 }
