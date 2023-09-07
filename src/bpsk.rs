@@ -1,5 +1,5 @@
 use crate::convolution::convolve;
-use crate::{bits_to_nrz, inflate, Bit};
+use crate::{bit_to_nrz, inflate, Bit};
 use num::complex::Complex;
 use std::f64::consts::PI;
 
@@ -36,7 +36,7 @@ where
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
 
-    inflate(bits_to_nrz(message), samples_per_symbol)
+    inflate(message.map(bit_to_nrz), samples_per_symbol)
         .enumerate()
         .map(move |(idx, msg_val)| {
             let time = start_time + (idx as f64) * t_step;

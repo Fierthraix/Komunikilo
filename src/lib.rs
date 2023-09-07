@@ -40,29 +40,6 @@ pub fn bit_to_nrz(bit: Bit) -> f64 {
     }
 }
 
-pub fn bits_to_nrz<T>(message: T) -> impl Iterator<Item = f64>
-where
-    T: Iterator<Item = Bit>,
-{
-    message.map(bit_to_nrz) // Convert bits to NRZ values.
-}
-
-/*
- if the "sign"
-*/
-pub fn foo_sign<I>(signal: I) -> impl Iterator<Item = Bit>
-where
-    I: Iterator<Item = Complex<f64>>,
-{
-    signal.map(|sample| {
-        if sample.re == 0f64 {
-            sample.im >= 0f64
-        } else {
-            sample.re >= 0f64
-        }
-    })
-}
-
 pub fn erf(x: f64) -> f64 {
     let t: f64 = 1f64 / (1f64 + 0.5 * x.abs());
     let tau = t
