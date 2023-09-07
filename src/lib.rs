@@ -3,7 +3,6 @@ use rand::rngs::ThreadRng;
 use rand_distr::{Distribution, Normal};
 
 pub mod bpsk;
-mod bufmap;
 mod convolution;
 mod costas;
 mod filters;

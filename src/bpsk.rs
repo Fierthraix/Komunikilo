@@ -1,4 +1,4 @@
-use crate::convolution::convolve;
+use crate::convolution::ConvolveExt;
 use crate::{bit_to_nrz, inflate, Bit};
 use num::complex::Complex;
 use std::f64::consts::PI;
@@ -63,7 +63,8 @@ where
         let received = sample * (2_f64 * PI * carrier_freq * time).cos();
         received.re
     });
-    convolve(real_demod, filter)
+    real_demod
+        .convolve(filter)
         .enumerate()
         .filter_map(move |(i, val)| {
             if i % samples_per_symbol == 0 {
