@@ -38,7 +38,7 @@ where
     inflate(message.tuples(), samples_per_symbol)
         .enumerate()
         .map(move |(idx, (bit1, bit2))| {
-            println!("{}: {}  {}", idx, bit1, bit2);
+            // println!("{}: {}  {}", idx, bit1, bit2);
             let time = (idx as f64) * t_step + start_time;
             let i_t = bit_to_nrz(bit1) * (2f64 * PI * carrier_freq * time).cos();
             let q_t = -bit_to_nrz(bit2) * (2f64 * PI * carrier_freq * time).sin();

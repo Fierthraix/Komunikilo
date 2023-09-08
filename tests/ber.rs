@@ -10,6 +10,8 @@ use plotpy::{Curve, Plot};
 use rand::Rng;
 use rayon::prelude::*;
 
+use util::not_inf;
+
 #[macro_use]
 mod util;
 
@@ -19,17 +21,6 @@ fn ber_bpsk(eb_no: f64) -> f64 {
 
 fn ber_qpsk(eb_no: f64) -> f64 {
     0.5 * erfc(eb_no.sqrt()) - 0.25 * erfc(eb_no.sqrt()).powi(2)
-}
-
-#[test]
-fn a_graph() {
-    let xmin = 0f64;
-    let xmax = 1f64;
-    let x: Vec<f64> = linspace(xmin, xmax, 100).collect();
-    let y1: Vec<f64> = x.iter().map(|&x| ber_bpsk(x)).collect();
-    let y2: Vec<f64> = x.iter().map(|&x| erfc(x)).collect();
-
-    plot!(x, y1, y2, "/tmp/asdf.svg");
 }
 
 #[test]
@@ -106,7 +97,7 @@ fn baseband_qpsk_works() {
 
     let y_theory: Vec<f64> = x.iter().map(|&x| ber_qpsk(x)).collect();
 
-    plot!(x, y, y_theory, "/tmp/ber_baseband_qpsk.png");
+    ber_plot!(x, y, y_theory, "/tmp/ber_baseband_qpsk.png");
 
     let qpsk_rx: Vec<Bit> = rx_baseband_qpsk_signal(qpsk_tx.iter().cloned()).collect();
     assert_eq!(data_bits, qpsk_rx);
@@ -181,10 +172,10 @@ fn basic_bpsk_works() {
 #[test]
 fn qpsk_works() {
     // Simulation parameters.
-    let num_bits = 4000; //1_000_000; //4000; // How many bits to transmit overall.
+    let num_bits = 11002; //1_000_000; //4000; // How many bits to transmit overall.
     let samp_rate = 44100; // Clock rate for both RX and TX.
-    let symbol_rate = 900; // Rate symbols come out the things.
-    let carrier_freq = 1800_f64;
+    let symbol_rate = 800; // Rate symbols come out the things.
+    let carrier_freq = 2000f64;
 
     // Test data.
     let mut rng = rand::thread_rng();
@@ -209,9 +200,9 @@ fn qpsk_works() {
     let y: Vec<f64> = x
         .par_iter()
         .map(|&i| {
-            // let sigma = (7.95f64 / (2f64 * i as f64)).sqrt();
-            // let sigma = (1f64 / (2f64 * i as f64)).sqrt();
-            let sigma = 7f64 / (2f64 * i);
+            // let sigma = (1f64 / (2f64 * i)).sqrt();
+            let sigma = not_inf((16f64 / (1f64 * i)).sqrt());
+            println!("i: {} || signma: {}", i, sigma);
             let noisy_signal = awgn(qpsk_tx.iter().cloned(), sigma);
             let rx = rx_qpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq, 0_f64);
 
@@ -224,12 +215,8 @@ fn qpsk_works() {
 
     let y_theory: Vec<f64> = x.iter().map(|&x| ber_qpsk(x)).collect();
 
-    let mut curve_practice = Curve::new();
-    curve_practice.draw(&x, &y);
-    let mut curve_theory = Curve::new();
-    curve_theory.draw(&x, &y_theory);
-
     ber_plot!(x, y, y_theory, "/tmp/ber_qpsk.png");
+    plot!(x, y, y_theory, "/tmp/ber_qpsk_unlog.png");
 }
 
 #[test]
@@ -262,10 +249,10 @@ fn bpsk_works() {
     // Container for the Eb/N0.
     let y: Vec<f64> = x
         .par_iter()
+        // .iter()
         .map(|&i| {
-            // let sigma = (7.95f64 / (2f64 * i as f64)).sqrt();
-            // let sigma = (1f64 / (2f64 * i as f64)).sqrt();
-            let sigma = 7f64 / (2f64 * i);
+            // let sigma = (1f64 / (2f64 * i)).sqrt();
+            let sigma = not_inf((16f64 / (1f64 * i)).sqrt());
             let noisy_signal = awgn(bpsk_tx.iter().cloned(), sigma);
             let rx = rx_bpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq, 0_f64);
 
@@ -277,11 +264,6 @@ fn bpsk_works() {
         .collect();
 
     let y_theory: Vec<f64> = x.iter().map(|&x| ber_bpsk(x)).collect();
-
-    let mut curve_practice = Curve::new();
-    curve_practice.draw(&x, &y);
-    let mut curve_theory = Curve::new();
-    curve_theory.draw(&x, &y_theory);
 
     ber_plot!(x, y, y_theory, "/tmp/ber_bpsk.png");
 }

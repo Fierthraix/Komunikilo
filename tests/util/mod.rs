@@ -39,3 +39,13 @@ macro_rules! error {
             / $thing1.len() as f64
     };
 }
+
+pub fn not_inf(num: f64) -> f64 {
+    if num == std::f64::INFINITY {
+        std::f64::MAX
+    } else if num == std::f64::NEG_INFINITY {
+        -std::f64::MAX
+    } else {
+        num
+    }
+}
