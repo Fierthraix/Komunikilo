@@ -65,6 +65,7 @@ where
         .convolve(filter)
         .enumerate()
         .filter_map(move |(i, val)| {
+            // Take every `samples_per_symbol`th output from this threshold detector.
             if i % samples_per_symbol == 0 {
                 Some(val)
             } else {
@@ -73,7 +74,6 @@ where
         })
         .map(|thresh_val| thresh_val > 0f64)
         .skip(1)
-    // Take every `samples_per_symbol`th output from this threshold detector.
 }
 
 #[cfg(test)]

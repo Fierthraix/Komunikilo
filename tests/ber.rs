@@ -1,7 +1,9 @@
 use comms::bpsk::{
     rx_baseband_bpsk_signal, rx_bpsk_signal, tx_baseband_bpsk_signal, tx_bpsk_signal,
 };
-use comms::qpsk::{rx_baseband_qpsk_signal, tx_baseband_qpsk_signal};
+use comms::qpsk::{
+    rx_baseband_qpsk_signal, rx_qpsk_signal, tx_baseband_qpsk_signal, tx_qpsk_signal,
+};
 use comms::{awgn, awgn_complex, erfc, linspace, Bit};
 use num::complex::Complex;
 use plotpy::{Curve, Plot};
@@ -174,6 +176,60 @@ fn basic_bpsk_works() {
         rx.iter().take(20).collect::<Vec<_>>()
     );
     // assert!(false);
+}
+
+#[test]
+fn qpsk_works() {
+    // Simulation parameters.
+    let num_bits = 4000; //1_000_000; //4000; // How many bits to transmit overall.
+    let samp_rate = 44100; // Clock rate for both RX and TX.
+    let symbol_rate = 900; // Rate symbols come out the things.
+    let carrier_freq = 1800_f64;
+
+    // Test data.
+    let mut rng = rand::thread_rng();
+    let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
+
+    // An x-axis for plotting Eb/N0.
+    let xmin = f64::MIN_POSITIVE;
+    let xmax = 15f64;
+    let x: Vec<f64> = linspace(xmin, xmax, 100).collect();
+
+    // Tx output.
+    let qpsk_tx: Vec<f64> = tx_qpsk_signal(
+        data_bits.iter().cloned(),
+        samp_rate,
+        symbol_rate,
+        carrier_freq,
+        0_f64,
+    )
+    .collect();
+
+    // Container for the Eb/N0.
+    let y: Vec<f64> = x
+        .par_iter()
+        .map(|&i| {
+            // let sigma = (7.95f64 / (2f64 * i as f64)).sqrt();
+            // let sigma = (1f64 / (2f64 * i as f64)).sqrt();
+            let sigma = 7f64 / (2f64 * i);
+            let noisy_signal = awgn(qpsk_tx.iter().cloned(), sigma);
+            let rx = rx_qpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq, 0_f64);
+
+            rx.zip(data_bits.iter())
+                .map(|(rx, &tx)| if rx == tx { 0f64 } else { 1f64 })
+                .sum::<f64>()
+                / num_bits as f64
+        })
+        .collect();
+
+    let y_theory: Vec<f64> = x.iter().map(|&x| ber_qpsk(x)).collect();
+
+    let mut curve_practice = Curve::new();
+    curve_practice.draw(&x, &y);
+    let mut curve_theory = Curve::new();
+    curve_theory.draw(&x, &y_theory);
+
+    ber_plot!(x, y, y_theory, "/tmp/ber_qpsk.png");
 }
 
 #[test]

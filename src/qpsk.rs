@@ -106,4 +106,35 @@ mod tests {
 
         assert_eq!(data_bits, qpsk_rx);
     }
+
+    #[test]
+    fn full_qpsk() {
+        let num_bits = 9002; // How many bits to transmit overall.
+        let samp_rate = 44100; // Clock rate for both RX and TX.
+        let symbol_rate = 900; // Rate symbols come out the things.
+        let carrier_freq = 1800_f64;
+
+        let mut rng = rand::thread_rng();
+        let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
+
+        let qpsk_tx: Vec<f64> = tx_qpsk_signal(
+            data_bits.iter().cloned(),
+            samp_rate,
+            symbol_rate,
+            carrier_freq,
+            0f64,
+        )
+        .collect();
+
+        let qpsk_rx: Vec<Bit> = rx_qpsk_signal(
+            qpsk_tx.iter().cloned(),
+            samp_rate,
+            symbol_rate,
+            carrier_freq,
+            0f64,
+        )
+        .collect();
+
+        assert_eq!(data_bits, qpsk_rx);
+    }
 }
