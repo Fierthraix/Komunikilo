@@ -3,6 +3,7 @@ use comms::bpsk::{
 };
 use comms::{awgn, Bit};
 use plotpy::{Curve, Plot};
+use welch_sde::{Build, PowerSpectrum, SpectralDensity};
 
 #[macro_use]
 mod util;
@@ -62,4 +63,26 @@ fn bpsk_graphs() {
     println!("ERROR: {}", error!(rx_clean, rx_dirty));
     assert!(error!(rx_clean, rx_dirty) <= 0.2);
     // assert_eq!(rx_clean, rx_dirty);
+
+    let psd: SpectralDensity<f64> = SpectralDensity::builder(&noisy_signal, carrier_freq).build();
+    let sd = psd.periodogram();
+    plot!(sd.frequency(), (*sd).to_vec(), "/tmp/bpsk_specdens.png");
+    let psd: SpectralDensity<f64> = SpectralDensity::builder(&tx, carrier_freq).build();
+    let sd = psd.periodogram();
+    plot!(
+        sd.frequency(),
+        (*sd).to_vec(),
+        "/tmp/bpsk_specdens_clean.png"
+    );
+
+    let psd: PowerSpectrum<f64> = PowerSpectrum::builder(&noisy_signal).build();
+    let sd = psd.periodogram();
+    plot!(sd.frequency(), (*sd).to_vec(), "/tmp/bpsk_pwrspctrm.png");
+    let psd: PowerSpectrum<f64> = PowerSpectrum::builder(&tx).build();
+    let sd = psd.periodogram();
+    plot!(
+        sd.frequency(),
+        (*sd).to_vec(),
+        "/tmp/bpsk_pwrspctrm_clean.png"
+    );
 }

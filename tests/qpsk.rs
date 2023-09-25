@@ -1,8 +1,9 @@
 use comms::qpsk::{
     rx_baseband_qpsk_signal, rx_qpsk_signal, tx_baseband_qpsk_signal, tx_qpsk_signal,
 };
-use comms::{bit_to_nrz, inflate, linspace, Bit};
+use comms::{awgn, bit_to_nrz, inflate, linspace, Bit};
 use plotpy::{Curve, Plot};
+use welch_sde::{Build, PowerSpectrum, SpectralDensity};
 
 #[macro_use]
 mod util;
@@ -18,27 +19,48 @@ fn qpsk_graphs() {
     )
     .collect();
 
-    // let (i_b, q_b) =
     let samp_rate = 44100;
-    // let fc = 100;
     let fc = 1800_f64;
     let symb_rate = 900;
-    let tx: Vec<f64> =
-        tx_qpsk_signal(data.iter().cloned(), samp_rate, symb_rate, fc as f64, 0f64).collect();
 
+    let tx: Vec<f64> =
+        tx_qpsk_signal(data.iter().cloned(), samp_rate, symb_rate, fc, 0f64).collect();
     let rx: Vec<Bit> = rx_qpsk_signal(tx.iter().cloned(), samp_rate, symb_rate, fc, 0f64).collect();
 
+    /*
     let xtx: Vec<f64> = linspace(0f64, 1f64, tx.len()).collect();
     let xrx: Vec<f64> = linspace(0f64, 1f64, rx.len()).collect();
-    let xd: Vec<f64> = linspace(0f64, data.len() as f64, data.len()).collect();
-
-    let d_t: Vec<f64> = data.iter().cloned().map(bit_to_nrz).collect();
-    plot!(xd, d_t, "/tmp/d_t.png");
 
     let rx_t: Vec<f64> = rx.iter().cloned().map(bit_to_nrz).collect();
     plot!(xrx, rx_t, "/tmp/rx_t.png");
 
     plot!(xtx, tx, "/tmp/tx_t.png");
+    */
 
     assert_eq!(rx, data);
+
+    let sigma = 2f64;
+    let noisy_signal: Vec<f64> = awgn(tx.iter().cloned(), sigma).collect();
+
+    let psd: SpectralDensity<f64> = SpectralDensity::builder(&tx, fc).build();
+    let sd = psd.periodogram();
+    plot!(sd.frequency(), (*sd).to_vec(), "/tmp/qpsk_specdens.png");
+    let psd: SpectralDensity<f64> = SpectralDensity::builder(&noisy_signal, fc).build();
+    let sd = psd.periodogram();
+    plot!(
+        sd.frequency(),
+        (*sd).to_vec(),
+        "/tmp/qpsk_specdens_dirty.png"
+    );
+
+    let psd: PowerSpectrum<f64> = PowerSpectrum::builder(&tx).build();
+    let sd = psd.periodogram();
+    plot!(sd.frequency(), (*sd).to_vec(), "/tmp/qpsk_pwrspctrm.png");
+    let psd: PowerSpectrum<f64> = PowerSpectrum::builder(&noisy_signal).build();
+    let sd = psd.periodogram();
+    plot!(
+        sd.frequency(),
+        (*sd).to_vec(),
+        "/tmp/qpsk_pwrspctrm_dirty.png"
+    );
 }
