@@ -1,3 +1,4 @@
+use assert_approx_eq::assert_approx_eq;
 use num::complex::Complex;
 use rand::rngs::ThreadRng;
 use rand_distr::{Distribution, Normal};
@@ -6,6 +7,7 @@ pub mod bpsk;
 mod convolution;
 mod costas;
 mod filters;
+mod hadamard;
 pub mod qpsk;
 
 pub type Bit = bool;
@@ -130,8 +132,30 @@ impl Awgn {
     }
 }
 
+pub fn energy<I>(signal: I, sample_rate: f64) -> f64
+where
+    I: Iterator<Item = f64>,
+{
+    signal.map(|sample| sample.powi(2)).sum::<f64>() / sample_rate
+}
+
+pub fn power<I>(signal: I, sample_rate: f64) -> f64
+where
+    I: Iterator<Item = f64>,
+{
+    let (count, power) = signal.enumerate().fold((0, 0f64), |acc, (idx, sample)| {
+        (idx, acc.1 + sample.powi(2))
+    });
+
+    power / (count as f64) / sample_rate
+}
+
 #[cfg(test)]
 mod tests {
+
+    use super::*;
+    use std::f64::consts::PI;
+
     #[test]
     fn it_works() {
         let fs = 44100;
@@ -140,5 +164,26 @@ mod tests {
         let _f0 = 1800;
         let ns = fs / baud;
         let _n = nbits * ns;
+    }
+
+    #[test]
+    fn energy_test() {
+        let fc: f64 = 100f64;
+
+        let start = 0f64;
+        let stop = 1f64;
+        let steps: usize = 1000;
+        let sample_rate: f64 = steps as f64 / (stop - start) as f64;
+        let t: Vec<f64> = linspace(start, stop, steps).collect();
+        let sinx: Vec<f64> = t.iter().map(|&t| (2f64 * PI * fc * t).sin()).collect();
+        let sinx2: Vec<f64> = t
+            .iter()
+            .map(|&t| (2f64 * PI * fc * t).sin().powi(2))
+            .collect();
+
+        let e_sinx = energy(sinx.iter().cloned(), sample_rate);
+        let p_sinx = power(sinx.iter().cloned(), sample_rate);
+        assert_approx_eq!(e_sinx, 0.5);
+        assert_approx_eq!(p_sinx, 5e-4);
     }
 }

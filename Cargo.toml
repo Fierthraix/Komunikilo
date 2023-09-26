@@ -11,6 +11,7 @@ rand = "0.8"
 rand_distr = "0.4"
 itertools = "0.10"
 rustfft = "6.1"
+assert_approx_eq = "1.1"
 
 [dev-dependencies]
 plotpy = "0.4"
