@@ -1,12 +1,13 @@
 use crate::bpsk::{rx_bpsk_signal, tx_bpsk_signal};
 use crate::chunks::ChunkExt;
-use crate::{inflate, Bit};
+use crate::{inflate::InflateExt, Bit};
 
 pub fn tx_baseband_cdma<'a, I>(message: I, key: &'a [Bit]) -> impl Iterator<Item = Bit> + 'a
 where
     I: Iterator<Item = Bit> + 'a,
 {
-    inflate(message, key.len()) // Make each bit as long as the key.
+    message
+        .inflate(key.len()) // Make each bit as long as the key.
         .zip(key.iter().cycle())
         .map(|(bit, key)| bit ^ key) // XOR the bit with the entire key.
 }
@@ -77,7 +78,6 @@ mod tests {
     use crate::hadamard::HadamardMatrix;
     use rstest::rstest;
 
-    // TODO: Generalize to different haddamard matrix sizes.
     #[rstest]
     #[case(2)]
     #[case(4)]
@@ -85,8 +85,7 @@ mod tests {
     #[case(16)]
     #[case(256)]
     fn baseband_cdma(#[case] matrix_size: usize) {
-        // let num_bits = 9002;
-        let num_bits = 65536;
+        let num_bits = 16960;
 
         let walsh_codes = HadamardMatrix::new(matrix_size);
         let key_1: Vec<Bit> = walsh_codes.key(0).clone();

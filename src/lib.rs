@@ -9,6 +9,7 @@ mod convolution;
 mod costas;
 mod filters;
 mod hadamard;
+pub mod inflate;
 pub mod qpsk;
 
 pub type Bit = bool;
@@ -24,14 +25,6 @@ pub fn undb(x: f64) -> f64 {
 pub fn linspace(start: f64, stop: f64, num: usize) -> impl Iterator<Item = f64> {
     let step = (stop - start) / (num as f64);
     (0..num).map(move |i| start + step * (i as f64))
-}
-
-pub fn inflate<I, T>(input: I, rate: usize) -> impl Iterator<Item = T>
-where
-    I: Iterator<Item = T>,
-    T: Clone,
-{
-    input.flat_map(move |item| std::iter::repeat(item).take(rate))
 }
 
 pub fn bit_to_nrz(bit: Bit) -> f64 {

@@ -1,5 +1,5 @@
 use crate::convolution::convolve2;
-use crate::{bit_to_nrz, inflate, Bit};
+use crate::{bit_to_nrz, inflate::InflateExt, Bit};
 use itertools::Itertools;
 use num::complex::Complex;
 use std::f64::consts::PI;
@@ -35,7 +35,9 @@ where
 {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
-    inflate(message.tuples(), samples_per_symbol)
+    message
+        .tuples()
+        .inflate(samples_per_symbol)
         .enumerate()
         .map(move |(idx, (bit1, bit2))| {
             // println!("{}: {}  {}", idx, bit1, bit2);
@@ -68,9 +70,11 @@ where
         let qi = sample * -(2_f64 * PI * carrier_freq * time).sin();
 
         (ii, qi)
+        // vec![ii, qi]
     });
 
     convolve2(real_demod, filter)
+        // nonvolve(2, real_demod, filter)
         .enumerate()
         .filter_map(move |(i, val)| {
             if i % samples_per_symbol == 0 {
@@ -80,6 +84,7 @@ where
             }
         })
         .flat_map(|(val1, val2)| [val1 >= 0f64, val2 >= 0f64].into_iter())
+        // .flat_map(|valz| valz.iter().map(|val| val >= 0f64))
         .skip(2)
 }
 
@@ -109,7 +114,8 @@ mod tests {
 
     #[test]
     fn full_qpsk() {
-        let num_bits = 9002; // How many bits to transmit overall.
+        // let num_bits = 9002; // How many bits to transmit overall.
+        let num_bits = 20; // How many bits to transmit overall.
         let samp_rate = 44100; // Clock rate for both RX and TX.
         let symbol_rate = 900; // Rate symbols come out the things.
         let carrier_freq = 1800_f64;

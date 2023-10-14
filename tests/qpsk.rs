@@ -1,7 +1,7 @@
 use comms::qpsk::{
     rx_baseband_qpsk_signal, rx_qpsk_signal, tx_baseband_qpsk_signal, tx_qpsk_signal,
 };
-use comms::{awgn, bit_to_nrz, inflate, linspace, Bit};
+use comms::{awgn, bit_to_nrz, inflate::InflateExt, linspace, Bit};
 use plotpy::{Curve, Plot};
 use welch_sde::{Build, PowerSpectrum, SpectralDensity};
 
@@ -10,13 +10,11 @@ mod util;
 
 #[test]
 fn qpsk_graphs() {
-    let data: Vec<Bit> = inflate(
-        [
-            false, false, true, false, false, true, false, true, true, true,
-        ]
-        .into_iter(),
-        2,
-    )
+    let data: Vec<Bit> = [
+        false, false, true, false, false, true, false, true, true, true,
+    ]
+    .into_iter()
+    .inflate(2)
     .collect();
 
     let samp_rate = 44100;
