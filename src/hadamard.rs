@@ -23,6 +23,9 @@ impl HadamardMatrix {
 
         Self { matrix }
     }
+    pub fn key(&self, n: usize) -> &Vec<Bit> {
+        self.matrix.get(n).unwrap()
+    }
 }
 
 impl std::fmt::Display for HadamardMatrix {

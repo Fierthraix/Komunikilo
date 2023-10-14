@@ -1,9 +1,10 @@
-use assert_approx_eq::assert_approx_eq;
 use num::complex::Complex;
 use rand::rngs::ThreadRng;
 use rand_distr::{Distribution, Normal};
 
 pub mod bpsk;
+pub mod cdma;
+mod chunks;
 mod convolution;
 mod costas;
 mod filters;
@@ -154,6 +155,7 @@ where
 mod tests {
 
     use super::*;
+    use assert_approx_eq::assert_approx_eq;
     use std::f64::consts::PI;
 
     #[test]
@@ -176,7 +178,7 @@ mod tests {
         let sample_rate: f64 = steps as f64 / (stop - start) as f64;
         let t: Vec<f64> = linspace(start, stop, steps).collect();
         let sinx: Vec<f64> = t.iter().map(|&t| (2f64 * PI * fc * t).sin()).collect();
-        let sinx2: Vec<f64> = t
+        let _sinx2: Vec<f64> = t
             .iter()
             .map(|&t| (2f64 * PI * fc * t).sin().powi(2))
             .collect();
