@@ -8,7 +8,7 @@ mod chunks;
 mod convolution;
 mod costas;
 mod filters;
-mod hadamard;
+pub mod hadamard;
 pub mod inflate;
 pub mod qpsk;
 
@@ -60,11 +60,23 @@ pub fn erfc(x: f64) -> f64 {
     1f64 - erf(x)
 }
 
+macro_rules! ber {
+    ($tx:expr, $rx:expr) => {
+        let len = std::cmp::min(tx, rx);
+        let total = tx
+            .iter()
+            .zip(rx.iter())
+            .map(|(ti, ri)| if t1 == r1 { 0 } else { 1 })
+            .sum();
+        (total as f64) / (len as f64)
+    };
+}
+
 /*
-pub fn ber<I, T>(tx: I, rx: I) -> f64
+pub fn ber<'a, I, T>(tx: I, rx: I) -> f64
 where
-    I: Iterator<Item = T>,
-    T: Eq,
+    I: Iterator<Item = &'a T> + ExactSizeIterator,
+    T: Eq + 'a,
 {
     let num_samples = tx.len();
     let num_errors = tx
@@ -142,6 +154,10 @@ where
     });
 
     power / (count as f64) / sample_rate
+}
+
+pub fn logistic_map(mu: f64, x0: f64) -> f64 {
+    mu * x0 * (1f64 - x0)
 }
 
 #[cfg(test)]
