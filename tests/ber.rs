@@ -1,6 +1,8 @@
 use comms::bpsk::{
     rx_baseband_bpsk_signal, rx_bpsk_signal, tx_baseband_bpsk_signal, tx_bpsk_signal,
 };
+use comms::cdma::{rx_cdma_bpsk_signal, tx_cdma_bpsk_signal};
+use comms::hadamard::HadamardMatrix;
 use comms::qpsk::{
     rx_baseband_qpsk_signal, rx_qpsk_signal, tx_baseband_qpsk_signal, tx_qpsk_signal,
 };
@@ -218,4 +220,70 @@ fn qpsk_works() {
 
     ber_plot!(x, y, y_theory, "/tmp/ber_qpsk.png");
     plot!(x, y, y_theory, "/tmp/ber_qpsk_unlog.png");
+}
+
+#[test]
+fn cdma_works() {
+    // Simulation parameters.
+    let num_bits = 4_000; //1_000_000; //4000; // How many bits to transmit overall.
+    let samp_rate = 44100; // Clock rate for both RX and TX.
+    let symbol_rate = 800; // Rate symbols come out the things.
+    let carrier_freq = 2000f64;
+    let n_scale = samp_rate as f64 / carrier_freq as f64;
+
+    // Test data.
+    let mut rng = rand::thread_rng();
+    let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
+    let h = HadamardMatrix::new(16);
+    let key = h.key(0);
+
+    // An x-axis for plotting Eb/N0.
+    let xmin = f64::MIN_POSITIVE;
+    let xmax = 15f64;
+    let x: Vec<f64> = linspace(xmin, xmax, 50).collect();
+
+    // Tx output.
+    let cdma_tx: Vec<f64> = tx_cdma_bpsk_signal(
+        data_bits.iter().cloned(),
+        samp_rate,
+        symbol_rate,
+        carrier_freq,
+        0_f64,
+        key,
+    )
+    .collect();
+
+    // Container for the Eb/N0.
+    let y: Vec<f64> = x
+        .par_iter()
+        .map(|&i| {
+            let konst = n_scale.sqrt();
+            let sigma = (1f64 / (2f64 * i)).sqrt();
+
+            let normal = Normal::new(0f64, sigma).unwrap();
+            let noisy_signal = cdma_tx
+                .iter()
+                .cloned()
+                .zip(normal.sample_iter(rand::thread_rng()))
+                .map(|(symb, noise)| symb + noise * konst);
+            let rx = rx_cdma_bpsk_signal(
+                noisy_signal,
+                samp_rate,
+                symbol_rate,
+                carrier_freq,
+                0_f64,
+                key,
+            );
+
+            rx.zip(data_bits.iter())
+                .map(|(rx, &tx)| if rx == tx { 0f64 } else { 1f64 })
+                .sum::<f64>()
+                / num_bits as f64
+        })
+        .collect();
+
+    let y_theory: Vec<f64> = x.iter().map(|&x| ber_qpsk(x)).collect();
+
+    ber_plot!(x, y, y_theory, "/tmp/ber_cdma.png");
+    plot!(x, y, y_theory, "/tmp/ber_cdma_unlog.png");
 }
