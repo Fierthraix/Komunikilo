@@ -7,6 +7,7 @@ pub mod cdma;
 mod chunks;
 mod convolution;
 mod costas;
+mod csk;
 mod filters;
 pub mod hadamard;
 pub mod inflate;
