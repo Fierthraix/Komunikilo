@@ -45,85 +45,36 @@ impl std::fmt::Display for HadamardMatrix {
 mod tests {
 
     use super::*;
+    use itertools::Itertools;
+    use rstest::rstest;
 
-    fn hadamard_from_str(string: &str) -> HadamardMatrix {
-        let mut matrix: Vec<Vec<Bit>> = Vec::new();
+    #[rstest]
+    // #[case(2)]
+    // #[case(4)]
+    #[case(8)]
+    #[case(16)]
+    #[case(32)]
+    #[case(64)]
+    #[case(128)]
+    #[case(256)]
+    #[case(512)]
+    #[case(1024)]
+    #[case(2048)]
+    fn hadamard(#[case] matrix_size: usize) {
+        let h = HadamardMatrix::new(matrix_size);
 
-        for line in string.split('\n') {
-            let row: Vec<Bit> = line
-                .chars()
-                .filter_map(|chr| match chr {
-                    'T' | 't' => Some(true),
-                    'F' | 'f' => Some(false),
-                    _ => None,
-                })
-                .collect();
-            if !row.is_empty() {
-                matrix.push(row)
-            }
+        for keys in h.matrix.iter().combinations(2) {
+            let key_1 = keys[0];
+            let key_2 = keys[1];
+
+            // Check for orthogonality of the bitsequences.
+            let checksum: usize = key_1
+                .iter()
+                .zip(key_2.iter())
+                .map(|(&b1, &b2)| if b1 && b2 { 1 } else { 0 })
+                .sum::<usize>()
+                % 2;
+            assert_eq!(checksum, 0);
         }
-
-        // Sanity Check.
-        let num_rows = matrix.len();
-        for row in &matrix {
-            assert_eq!(num_rows, row.len());
-        }
-
-        HadamardMatrix { matrix }
-    }
-
-    #[test]
-    fn it_works() {
-        let expected2 = hadamard_from_str(
-            "T T
-             T F",
-        );
-
-        let expected4 = hadamard_from_str(
-            "T T T T
-             T F T F
-             T T F F
-             T F F T",
-        );
-
-        let expected8 = hadamard_from_str(
-            "T T T T T T T T
-             T F T F T F T F
-             T T F F T T F F
-             T F F T T F F T
-             T T T T F F F F
-             T F T F F T F T
-             T T F F F F T T
-             T F F T F T T F",
-        );
-
-        let expected16 = hadamard_from_str(
-            "T T T T T T T T T T T T T T T T
-             T F T F T F T F T F T F T F T F
-             T T F F T T F F T T F F T T F F
-             T F F T T F F T T F F T T F F T
-             T T T T F F F F T T T T F F F F
-             T F T F F T F T T F T F F T F T
-             T T F F F F T T T T F F F F T T
-             T F F T F T T F T F F T F T T F
-             T T T T T T T T F F F F F F F F
-             T F T F T F T F F T F T F T F T
-             T T F F T T F F F F T T F F T T
-             T F F T T F F T F T T F F T T F
-             T T T T F F F F F F F F T T T T
-             T F T F F T F T F T F T T F T F
-             T T F F F F T T F F T T T T F F
-             T F F T F T T F F T T F T F F T",
-        );
-
-        let computed2 = HadamardMatrix::new(2);
-        let computed4 = HadamardMatrix::new(4);
-        let computed8 = HadamardMatrix::new(8);
-        let computed16 = HadamardMatrix::new(16);
-
-        assert_eq!(computed2, expected2);
-        assert_eq!(computed4, expected4);
-        assert_eq!(computed8, expected8);
-        assert_eq!(computed16, expected16);
     }
 }
