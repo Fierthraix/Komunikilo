@@ -7,27 +7,33 @@ pub mod cdma;
 mod chunks;
 mod convolution;
 mod costas;
-mod csk;
+pub mod csk;
+pub mod dcsk;
 mod filters;
 pub mod hadamard;
 pub mod inflate;
+mod logistic_map;
 pub mod qpsk;
 
 pub type Bit = bool;
 
+#[inline]
 pub fn db(x: f64) -> f64 {
     10f64 * x.log10()
 }
 
+#[inline]
 pub fn undb(x: f64) -> f64 {
     10f64.powf(x / 10f64)
 }
 
+#[inline]
 pub fn linspace(start: f64, stop: f64, num: usize) -> impl Iterator<Item = f64> {
     let step = (stop - start) / (num as f64);
     (0..num).map(move |i| start + step * (i as f64))
 }
 
+#[inline]
 pub fn bit_to_nrz(bit: Bit) -> f64 {
     if bit {
         1_f64
@@ -36,6 +42,7 @@ pub fn bit_to_nrz(bit: Bit) -> f64 {
     }
 }
 
+#[inline]
 pub fn erf(x: f64) -> f64 {
     let t: f64 = 1f64 / (1f64 + 0.5 * x.abs());
     let tau = t
@@ -57,6 +64,7 @@ pub fn erf(x: f64) -> f64 {
     }
 }
 
+#[inline]
 pub fn erfc(x: f64) -> f64 {
     1f64 - erf(x)
 }
@@ -155,10 +163,6 @@ where
     });
 
     power / (count as f64) / sample_rate
-}
-
-pub fn logistic_map(mu: f64, x0: f64) -> f64 {
-    mu * x0 * (1f64 - x0)
 }
 
 #[cfg(test)]
