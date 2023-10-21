@@ -1,4 +1,4 @@
-use crate::{bit_to_nrz, logistic_map::LogisticMap, Bit};
+use crate::{bit_to_nrz, chunks::ChunkExt, logistic_map::LogisticMap, Bit};
 
 pub fn tx_baseband_dcsk<I>(message: I) -> impl Iterator<Item = f64>
 where
@@ -13,47 +13,12 @@ pub fn rx_baseband_dcsk<I>(message: I) -> impl Iterator<Item = Bit>
 where
     I: Iterator<Item = f64>,
 {
-    struct RxDcsk<I>
-    where
-        I: Iterator<Item = f64>,
-    {
-        source: I,
-    }
+    message.chunks(2).map(|chunk| {
+        let reference = chunk[0];
+        let information = chunk[1];
 
-    impl<I> RxDcsk<I>
-    where
-        I: Iterator<Item = f64>,
-    {
-        fn new(source: I) -> RxDcsk<I> {
-            Self { source }
-        }
-    }
-
-    impl<I> Iterator for RxDcsk<I>
-    where
-        I: Iterator<Item = f64>,
-    {
-        type Item = Bit;
-
-        fn next(&mut self) -> Option<Bit> {
-            let reference: f64 = self.source.next()?;
-            let information: f64 = self.source.next()?;
-            Some(reference * information < 0f64)
-        }
-    }
-
-    trait RxDcskExt: Iterator {
-        fn dcsk_rx(self) -> RxDcsk<Self>
-        where
-            Self: Iterator<Item = f64> + Sized,
-        {
-            RxDcsk::new(self)
-        }
-    }
-
-    impl<I: Iterator> RxDcskExt for I {}
-
-    message.dcsk_rx()
+        reference * information < 0f64
+    })
 }
 
 #[cfg(test)]
