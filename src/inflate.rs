@@ -1,4 +1,4 @@
-pub trait InflateExt: Iterator {
+pub trait InflateIt: Iterator {
     fn inflate<T>(self, copies: usize) -> Inflate<T, Self>
     where
         Self: Iterator<Item = T> + Sized,
@@ -8,7 +8,7 @@ pub trait InflateExt: Iterator {
     }
 }
 
-impl<I: Iterator> InflateExt for I {}
+impl<I: Iterator> InflateIt for I {}
 
 pub struct Inflate<T, I>
 where

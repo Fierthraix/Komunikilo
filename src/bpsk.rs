@@ -1,5 +1,5 @@
-use crate::convolution::ConvolveExt;
-use crate::{bit_to_nrz, inflate::InflateExt, Bit};
+use crate::convolution::ConvolveIt;
+use crate::{bit_to_nrz, inflate::InflateIt, Bit};
 use num::complex::Complex;
 use std::f64::consts::PI;
 

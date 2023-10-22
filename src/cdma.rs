@@ -1,6 +1,6 @@
 use crate::bpsk::{rx_bpsk_signal, tx_bpsk_signal};
-use crate::chunks::ChunkExt;
-use crate::{inflate::InflateExt, Bit};
+use crate::chunks::ChunkIt;
+use crate::{inflate::InflateIt, Bit};
 
 pub fn tx_baseband_cdma<'a, I>(message: I, key: &'a [Bit]) -> impl Iterator<Item = Bit> + 'a
 where

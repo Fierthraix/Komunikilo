@@ -104,7 +104,7 @@ where
     }
 }
 
-pub trait ConvolveExt: Iterator {
+pub trait ConvolveIt: Iterator {
     fn convolve<T>(self, filter: Vec<T>) -> Convolver<T, Self>
     where
         Self: Iterator<Item = T> + Sized,
@@ -114,7 +114,7 @@ pub trait ConvolveExt: Iterator {
     }
 }
 
-impl<I: Iterator> ConvolveExt for I {}
+impl<I: Iterator> ConvolveIt for I {}
 
 pub struct Convolver<T, I>
 where

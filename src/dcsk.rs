@@ -1,4 +1,5 @@
-use crate::{bit_to_nrz, chunks::ChunkExt, logistic_map::LogisticMap, Bit};
+use crate::{bit_to_nrz, logistic_map::LogisticMap, Bit};
+use itertools::Itertools;
 
 pub fn tx_baseband_dcsk<I>(message: I) -> impl Iterator<Item = f64>
 where
@@ -13,12 +14,9 @@ pub fn rx_baseband_dcsk<I>(message: I) -> impl Iterator<Item = Bit>
 where
     I: Iterator<Item = f64>,
 {
-    message.chunks(2).map(|chunk| {
-        let reference = chunk[0];
-        let information = chunk[1];
-
-        reference * information < 0f64
-    })
+    message
+        .tuples()
+        .map(|(reference, information)| reference * information < 0f64)
 }
 
 #[cfg(test)]
@@ -31,7 +29,7 @@ mod tests {
     #[test]
     fn baseband_dcsk() {
         let mut rng = rand::thread_rng();
-        let num_bits = 10;
+        let num_bits = 9001;
         let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
         let dcsk_tx: Vec<f64> = tx_baseband_dcsk(data_bits.iter().cloned()).collect();

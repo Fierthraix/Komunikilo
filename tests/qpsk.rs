@@ -1,7 +1,7 @@
 use comms::qpsk::{
     rx_baseband_qpsk_signal, rx_qpsk_signal, tx_baseband_qpsk_signal, tx_qpsk_signal,
 };
-use comms::{awgn, bit_to_nrz, inflate::InflateExt, linspace, Bit};
+use comms::{awgn, bit_to_nrz, inflate::InflateIt, linspace, Bit};
 use plotpy::{Curve, Plot};
 use welch_sde::{Build, PowerSpectrum, SpectralDensity};
 

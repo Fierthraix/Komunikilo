@@ -1,4 +1,4 @@
-pub trait ChunkExt: Iterator {
+pub trait ChunkIt: Iterator {
     fn chunks<T>(self, num_chunks: usize) -> Chunks<T, Self>
     where
         Self: Iterator<Item = T> + Sized,
@@ -8,7 +8,7 @@ pub trait ChunkExt: Iterator {
     }
 }
 
-impl<I: Iterator> ChunkExt for I {}
+impl<I: Iterator> ChunkIt for I {}
 
 pub struct Chunks<T, I>
 where
