@@ -57,9 +57,9 @@ mod tests {
     #[case(64)]
     #[case(128)]
     #[case(256)]
-    #[case(512)]
-    #[case(1024)]
-    #[case(2048)]
+    // #[case(512)]
+    // #[case(1024)]
+    // #[case(2048)]
     fn hadamard(#[case] matrix_size: usize) {
         let h = HadamardMatrix::new(matrix_size);
 

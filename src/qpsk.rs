@@ -4,10 +4,9 @@ use itertools::Itertools;
 use num::complex::Complex;
 use std::f64::consts::PI;
 
-pub fn tx_baseband_qpsk_signal<I>(message: I) -> impl Iterator<Item = Complex<f64>>
-where
-    I: Iterator<Item = Bit>,
-{
+pub fn tx_baseband_qpsk_signal<I: Iterator<Item = Bit>>(
+    message: I,
+) -> impl Iterator<Item = Complex<f64>> {
     message.tuples().map(|(bit1, bit2)| match (bit1, bit2) {
         (true, true) => Complex::new(2f64.sqrt(), 2f64.sqrt()),
         (true, false) => Complex::new(2f64.sqrt(), -(2f64.sqrt())),
@@ -16,23 +15,19 @@ where
     })
 }
 
-pub fn rx_baseband_qpsk_signal<I>(message: I) -> impl Iterator<Item = Bit>
-where
-    I: Iterator<Item = Complex<f64>>,
-{
+pub fn rx_baseband_qpsk_signal<I: Iterator<Item = Complex<f64>>>(
+    message: I,
+) -> impl Iterator<Item = Bit> {
     message.flat_map(|sample| [sample.re >= 0f64, sample.im >= 0f64].into_iter())
 }
 
-pub fn tx_qpsk_signal<I>(
+pub fn tx_qpsk_signal<I: Iterator<Item = Bit>>(
     message: I,
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
     start_time: f64,
-) -> impl Iterator<Item = f64>
-where
-    I: Iterator<Item = Bit>,
-{
+) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
     message
@@ -49,16 +44,13 @@ where
         })
 }
 
-pub fn rx_qpsk_signal<I>(
+pub fn rx_qpsk_signal<I: Iterator<Item = f64>>(
     message: I,
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
     start_time: f64,
-) -> impl Iterator<Item = Bit>
-where
-    I: Iterator<Item = f64>,
-{
+) -> impl Iterator<Item = Bit> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
     let filter: Vec<f64> = (0..samples_per_symbol).map(|_| 1f64).collect();

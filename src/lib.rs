@@ -110,10 +110,7 @@ where
         .map(|(sample, noise)| sample + noise)
 }
 
-pub fn awgn<I>(signal: I, sigma: f64) -> impl Iterator<Item = f64>
-where
-    I: Iterator<Item = f64>,
-{
+pub fn awgn<I: Iterator<Item = f64>>(signal: I, sigma: f64) -> impl Iterator<Item = f64> {
     signal
         .zip(
             Normal::new(0f64, sigma)
@@ -148,17 +145,11 @@ impl Awgn {
     }
 }
 
-pub fn energy<I>(signal: I, sample_rate: f64) -> f64
-where
-    I: Iterator<Item = f64>,
-{
+pub fn energy<I: Iterator<Item = f64>>(signal: I, sample_rate: f64) -> f64 {
     signal.map(|sample| sample.powi(2)).sum::<f64>() / sample_rate
 }
 
-pub fn power<I>(signal: I, sample_rate: f64) -> f64
-where
-    I: Iterator<Item = f64>,
-{
+pub fn power<I: Iterator<Item = f64>>(signal: I, sample_rate: f64) -> f64 {
     let (count, power) = signal.enumerate().fold((0, 0f64), |acc, (idx, sample)| {
         (idx, acc.1 + sample.powi(2))
     });

@@ -1,22 +1,16 @@
 use crate::{bit_to_nrz, logistic_map::LogisticMap, Bit};
 use itertools::Itertools;
 
-pub fn tx_baseband_dcsk<I>(message: I) -> impl Iterator<Item = f64>
-where
-    I: Iterator<Item = Bit>,
-{
+pub fn tx_baseband_dcsk<I: Iterator<Item = Bit>>(message: I) -> impl Iterator<Item = f64> {
     message
         .zip(LogisticMap::new(3.9, 0.1))
-        .flat_map(|(bit, reference)| [reference, reference * -bit_to_nrz(bit)].into_iter())
+        .flat_map(|(bit, reference)| [reference, reference * bit_to_nrz(bit)].into_iter())
 }
 
-pub fn rx_baseband_dcsk<I>(message: I) -> impl Iterator<Item = Bit>
-where
-    I: Iterator<Item = f64>,
-{
+pub fn rx_baseband_dcsk<I: Iterator<Item = f64>>(message: I) -> impl Iterator<Item = Bit> {
     message
         .tuples()
-        .map(|(reference, information)| reference * information < 0f64)
+        .map(|(reference, information)| reference * information > 0f64)
 }
 
 #[cfg(test)]
