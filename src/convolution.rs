@@ -199,11 +199,14 @@ where
 
     pub fn _nonvolve(&self) -> [T; N] {
         let mut ret = [T::default(); N];
-        for (&buf, &filt) in self.buffer.iter().zip(self.filter.iter().rev()) {
-            for (jdx, &buf) in buf.iter().enumerate() {
-                ret[jdx] += buf * filt;
-            }
-        }
+        self.buffer
+            .iter()
+            .zip(self.filter.iter().rev())
+            .for_each(|(&buf, &filt)| {
+                buf.iter()
+                    .enumerate()
+                    .for_each(|(jdx, &buf)| ret[jdx] += buf * filt)
+            });
         ret
     }
 }
