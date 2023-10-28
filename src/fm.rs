@@ -100,10 +100,6 @@ mod tests {
         let samp_rate = 44100; // Clock rate for both RX and TX.
         let symbol_rate = 900; // Rate symbols come out the things.
         let carrier_freq = 1800_f64;
-        // Derived Parameters.
-        let samples_per_symbol = samp_rate / symbol_rate;
-        let _num_samples = num_bits * samples_per_symbol;
-        //let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
 
         // Test proper.
         let mut rng = rand::thread_rng();
