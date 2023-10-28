@@ -6,11 +6,9 @@ use comms::hadamard::HadamardMatrix;
 use comms::qpsk::{
     rx_baseband_qpsk_signal, rx_qpsk_signal, tx_baseband_qpsk_signal, tx_qpsk_signal,
 };
-use comms::{awgn, awgn_complex, erfc, linspace, Bit};
-use complot;
+use comms::{awgn_complex, erfc, linspace, Bit};
 use num::complex::Complex;
 use plotpy::{Curve, Plot};
-use rand::rngs::ThreadRng;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use rayon::prelude::*;
@@ -220,6 +218,7 @@ fn qpsk_works() {
 
     ber_plot!(x, y, y_theory, "/tmp/ber_qpsk.png");
     plot!(x, y, y_theory, "/tmp/ber_qpsk_unlog.png");
+    // plot2!(x, y, y_theory, "/tmp/ber_qpsk_unlog2.png");
 }
 
 #[test]

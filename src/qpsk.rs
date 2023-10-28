@@ -1,6 +1,4 @@
-use crate::convolution::convolve2;
-use crate::take_every::TakeIt;
-use crate::{bit_to_nrz, inflate::InflateIt, Bit};
+use crate::{bit_to_nrz, iter::Iter, Bit};
 use itertools::Itertools;
 use num::complex::Complex;
 use std::f64::consts::PI;
@@ -57,20 +55,18 @@ pub fn rx_qpsk_signal<I: Iterator<Item = f64>>(
     let filter: Vec<f64> = (0..samples_per_symbol).map(|_| 1f64).collect();
 
     // Split into two branches for I and Q, and output two bits at once.
-    let real_demod = message.enumerate().map(move |(idx, sample)| {
-        let time = start_time + (idx as f64) * t_step;
-        let ii = sample * (2_f64 * PI * carrier_freq * time).cos();
-        let qi = sample * -(2_f64 * PI * carrier_freq * time).sin();
+    message
+        .enumerate()
+        .map(move |(idx, sample)| {
+            let time = start_time + (idx as f64) * t_step;
+            let ii = sample * (2_f64 * PI * carrier_freq * time).cos();
+            let qi = sample * -(2_f64 * PI * carrier_freq * time).sin();
 
-        (ii, qi)
-        // vec![ii, qi]
-    });
-
-    convolve2(real_demod, filter)
-        // nonvolve(2, real_demod, filter)
+            [ii, qi]
+        })
+        .nonvolve(filter)
         .take_every(samples_per_symbol)
-        .flat_map(|(val1, val2)| [val1 >= 0f64, val2 >= 0f64].into_iter())
-        // .flat_map(|valz| valz.iter().map(|val| val >= 0f64))
+        .flat_map(|[val1, val2]| [val1 >= 0f64, val2 >= 0f64].into_iter())
         .skip(2)
 }
 

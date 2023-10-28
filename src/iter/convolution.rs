@@ -2,15 +2,7 @@ use std::collections::VecDeque;
 use std::iter::{Iterator, Sum};
 use std::ops::Mul;
 
-pub trait ConvolveIt: Iterator {
-    fn convolve<T>(self, filter: Vec<T>) -> Convolver<T, Self>
-    where
-        Self: Iterator<Item = T> + Sized,
-        T: Mul<T, Output = T> + Sum<T> + Copy,
-    {
-        Convolver::new(self, filter)
-    }
-}
+pub trait ConvolveIt: Iterator {}
 
 impl<I: Iterator> ConvolveIt for I {}
 
@@ -81,98 +73,6 @@ where
     }
 }
 
-pub trait Convolve2It: Iterator {
-    fn convolve2<T>(self, filter: Vec<T>) -> Convolver2<T, Self>
-    where
-        Self: Iterator<Item = (T, T)> + Sized,
-        T: Mul<T, Output = T> + Sum<T> + Copy,
-    {
-        Convolver2::new(self, filter)
-    }
-}
-
-impl<I: Iterator> Convolve2It for I {}
-
-pub struct Convolver2<T, I>
-where
-    I: Iterator<Item = (T, T)>,
-    T: Mul<T, Output = T> + Sum<T> + Copy,
-{
-    source: I,
-    filter: Vec<T>,
-    buffer: VecDeque<(T, T)>,
-}
-
-impl<T, I> Convolver2<T, I>
-where
-    I: Iterator<Item = (T, T)>,
-    T: Mul<T, Output = T> + Sum<T> + Copy,
-{
-    pub fn new(source: I, filter: Vec<T>) -> Convolver2<T, I> {
-        let filter_len = filter.len();
-        Convolver2 {
-            source,
-            filter,
-            buffer: VecDeque::with_capacity(filter_len + 1),
-        }
-    }
-
-    pub fn _convolve(&self) -> (T, T) {
-        let (a, b): (Vec<T>, Vec<T>) = self.buffer.iter().cloned().unzip();
-
-        (
-            a.iter()
-                .zip(self.filter.iter().rev())
-                .map(|(&buf, &filt)| buf * filt)
-                .sum(),
-            b.iter()
-                .zip(self.filter.iter().rev())
-                .map(|(&buf, &filt)| buf * filt)
-                .sum(),
-        )
-    }
-}
-
-pub fn convolve2<T, I>(signal: I, filter: Vec<T>) -> impl Iterator<Item = (T, T)>
-where
-    I: Iterator<Item = (T, T)>,
-    T: Mul<T, Output = T> + Sum<T> + Copy,
-{
-    Convolver2::new(signal, filter)
-}
-
-impl<T, I> Iterator for Convolver2<T, I>
-where
-    I: Iterator<Item = (T, T)>,
-    T: Mul<T, Output = T> + Sum<T> + Copy,
-{
-    type Item = (T, T);
-
-    fn next(&mut self) -> Option<(T, T)> {
-        match self.source.next() {
-            Some(nums) => {
-                // Here is where the convolution happens.
-                self.buffer.push_front(nums);
-
-                if self.buffer.len() > self.filter.len() {
-                    // Deal with front, before buffer is filled to capacity.
-                    self.buffer.pop_back();
-                }
-                Some(self._convolve())
-            }
-            None => {
-                // if self.buffer.is_empty() {
-                if self.buffer.len() <= 1 || self.buffer.len() <= 1 {
-                    None
-                } else {
-                    self.buffer.pop_back();
-                    Some(self._convolve())
-                }
-            }
-        }
-    }
-}
-
 pub struct Nonvolver<T, I, const N: usize>
 where
     I: Iterator<Item = [T; N]>,
@@ -211,18 +111,6 @@ where
     }
 }
 
-pub trait NonvolveIt: Iterator {
-    fn nonvolve<T, const N: usize>(self, filter: Vec<T>) -> Nonvolver<T, Self, N>
-    where
-        Self: Iterator<Item = [T; N]> + Sized,
-        T: Mul<T, Output = T> + std::ops::AddAssign + Copy + Default,
-    {
-        Nonvolver::new(self, filter)
-    }
-}
-
-impl<I: Iterator> NonvolveIt for I {}
-
 impl<T, I, const N: usize> Iterator for Nonvolver<T, I, N>
 where
     I: Iterator<Item = [T; N]>,
@@ -258,6 +146,7 @@ where
 mod test {
 
     use super::*;
+    use crate::iter::Iter;
 
     fn convolve_linear(signal: Vec<f64>, filter: Vec<f64>) -> Vec<f64> {
         let out_len = signal.len() + filter.len() - 1;
@@ -308,14 +197,6 @@ mod test {
         let expected = Vec::from(EXPECTED);
         assert_eq!(expected.len(), convolution.len());
         assert_eq!(expected, convolution);
-    }
-
-    #[test]
-    fn convolve2() {
-        let _signal: Vec<f64> = (0..50).map(|x| x.into()).collect();
-        let _filter = vec![1., 1., 1., 1.];
-
-        // TODO: write test
     }
 
     #[test]

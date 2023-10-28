@@ -4,19 +4,15 @@ use rand_distr::{Distribution, Normal};
 
 pub mod bpsk;
 pub mod cdma;
-mod chunks;
-mod convolution;
 mod costas;
 pub mod csk;
 pub mod dcsk;
 mod filters;
 pub mod fm;
 pub mod hadamard;
-pub mod inflate;
-mod integrate;
+pub mod iter;
 mod logistic_map;
 pub mod qpsk;
-mod take_every;
 
 pub type Bit = bool;
 
@@ -134,9 +130,6 @@ impl Awgn {
             dist: Normal::new(0_f64, sigma).unwrap(),
         }
     }
-    //fn noise(&mut self) -> f64 {
-    //self.dist.sample_iter
-    //}
     pub fn awgn<'a, I>(&'a mut self, signal: I) -> impl Iterator<Item = Complex<f64>> + '_
     where
         I: Iterator<Item = Complex<f64>> + 'a,

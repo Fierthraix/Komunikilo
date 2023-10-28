@@ -1,7 +1,4 @@
-use crate::chunks::ChunkIt;
-use crate::inflate::InflateIt;
-use crate::integrate::IntegrateIt;
-use crate::{bit_to_nrz, Bit};
+use crate::{bit_to_nrz, iter::Iter, Bit};
 use std::f64::consts::PI;
 
 pub fn tx_fsk<I: Iterator<Item = Bit>>(
@@ -43,7 +40,7 @@ pub fn rx_fsk<I: Iterator<Item = f64>>(
         .map(move |(idx, chunk)| {
             let time = start_time + (idx as f64) * t_step * (samples_per_symbol as f64);
 
-            let rez = chunk
+            let (s0, s1, s2, s3) = chunk
                 .iter()
                 .enumerate()
                 .map(|(jdx, &s_i)| {
@@ -55,11 +52,12 @@ pub fn rx_fsk<I: Iterator<Item = f64>>(
                         s_i * (2f64 * PI * (carrier_freq - (sep / 2f64)) * t_i).sin(),
                     ]
                 })
-                .fold((0f64, 0f64, 0f64, 0f64), |acc, v| {
-                    (acc.0 + v[0], acc.1 + v[1], acc.2 + v[2], acc.3 + v[3])
-                });
+                .fold(
+                    (0f64, 0f64, 0f64, 0f64),
+                    |(a0, a1, a2, a3), [v0, v1, v2, v3]| (a0 + v0, a1 + v1, a2 + v2, a3 + v3),
+                );
 
-            (rez.0.powi(2) + rez.1.powi(2)) - (rez.2.powi(2) + rez.3.powi(2)) >= 0f64
+            (s0.powi(2) + s1.powi(2)) - (s2.powi(2) + s3.powi(2)) >= 0f64
         })
 }
 

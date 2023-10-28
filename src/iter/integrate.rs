@@ -1,15 +1,3 @@
-pub trait IntegrateIt: Iterator {
-    fn integrate<T>(self) -> Integrate<T, Self>
-    where
-        Self: Iterator<Item = T> + Sized,
-        T: std::default::Default,
-    {
-        Integrate::new(self)
-    }
-}
-
-impl<I: Iterator> IntegrateIt for I {}
-
 pub struct Integrate<T, I>
 where
     I: Iterator<Item = T>,
@@ -43,18 +31,6 @@ where
         Some(self.sum)
     }
 }
-
-pub trait NintegrateIt: Iterator {
-    fn nintegrate<T, const N: usize>(self) -> Nintegrate<T, Self, N>
-    where
-        Self: Iterator<Item = [T; N]> + Sized,
-        T: std::default::Default + Copy,
-    {
-        Nintegrate::new(self)
-    }
-}
-
-impl<I: Iterator> NintegrateIt for I {}
 
 pub struct Nintegrate<T, I, const N: usize>
 where
@@ -91,35 +67,5 @@ where
             .zip(self.sum.iter_mut())
             .for_each(|(row, sum)| *sum += row);
         Some(self.sum)
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn integrate() {
-        let num = 1426;
-
-        let expected: Vec<usize> = (1..num + 1).into_iter().collect();
-        let result: Vec<usize> = [1].into_iter().cycle().take(num).integrate().collect();
-        assert_eq!(expected, result);
-    }
-
-    const N: usize = 4;
-    #[test]
-    fn nintegrate() {
-        let num = 1426;
-
-        let expected: Vec<[usize; N]> = (1..num + 1).into_iter().map(|x| [x; N]).collect();
-        let result: Vec<[usize; N]> = [1]
-            .into_iter()
-            .cycle()
-            .take(num)
-            .map(|x| [x; N])
-            .nintegrate()
-            .collect();
-        assert_eq!(expected, result);
     }
 }

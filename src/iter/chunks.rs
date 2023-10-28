@@ -1,15 +1,3 @@
-pub trait ChunkIt: Iterator {
-    fn chunks<T>(self, num_chunks: usize) -> Chunks<T, Self>
-    where
-        Self: Iterator<Item = T> + Sized,
-        T: Copy,
-    {
-        Chunks::new(self, num_chunks)
-    }
-}
-
-impl<I: Iterator> ChunkIt for I {}
-
 pub struct Chunks<T, I>
 where
     I: Iterator<Item = T>,

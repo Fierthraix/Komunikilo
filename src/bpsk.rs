@@ -1,6 +1,4 @@
-use crate::convolution::ConvolveIt;
-use crate::take_every::TakeIt;
-use crate::{bit_to_nrz, inflate::InflateIt, Bit};
+use crate::{bit_to_nrz, iter::Iter, Bit};
 use num::complex::Complex;
 use std::f64::consts::PI;
 
