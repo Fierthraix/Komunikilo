@@ -1,4 +1,5 @@
 use crate::convolution::ConvolveIt;
+use crate::take_every::TakeIt;
 use crate::{bit_to_nrz, inflate::InflateIt, Bit};
 use num::complex::Complex;
 use std::f64::consts::PI;
@@ -57,15 +58,7 @@ pub fn rx_bpsk_signal<I: Iterator<Item = f64>>(
     });
     real_demod
         .convolve(filter)
-        .enumerate()
-        .filter_map(move |(i, val)| {
-            // Take every `samples_per_symbol`th output from this threshold detector.
-            if i % samples_per_symbol == 0 {
-                Some(val)
-            } else {
-                None
-            }
-        })
+        .take_every(samples_per_symbol)
         .map(|thresh_val| thresh_val > 0f64)
         .skip(1)
 }

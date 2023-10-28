@@ -1,4 +1,5 @@
 use crate::convolution::convolve2;
+use crate::take_every::TakeIt;
 use crate::{bit_to_nrz, inflate::InflateIt, Bit};
 use itertools::Itertools;
 use num::complex::Complex;
@@ -67,14 +68,7 @@ pub fn rx_qpsk_signal<I: Iterator<Item = f64>>(
 
     convolve2(real_demod, filter)
         // nonvolve(2, real_demod, filter)
-        .enumerate()
-        .filter_map(move |(i, val)| {
-            if i % samples_per_symbol == 0 {
-                Some(val)
-            } else {
-                None
-            }
-        })
+        .take_every(samples_per_symbol)
         .flat_map(|(val1, val2)| [val1 >= 0f64, val2 >= 0f64].into_iter())
         // .flat_map(|valz| valz.iter().map(|val| val >= 0f64))
         .skip(2)

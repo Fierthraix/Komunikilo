@@ -10,11 +10,13 @@ mod costas;
 pub mod csk;
 pub mod dcsk;
 mod filters;
+pub mod fm;
 pub mod hadamard;
 pub mod inflate;
 mod integrate;
 mod logistic_map;
 pub mod qpsk;
+mod take_every;
 
 pub type Bit = bool;
 
