@@ -320,17 +320,18 @@ mod test {
 
     #[test]
     fn nonvolver() {
-        let signal: Vec<[f64; 4]> = (0..50)
+        const N: usize = 4;
+        let signal: Vec<[f64; N]> = (0..50)
             .map(|x| {
                 let y = x.into();
-                [y, y, y, y]
+                [y; N]
             })
             .collect();
         let filter = vec![1., 1., 1., 1.];
 
         let convolution: Vec<[f64; 4]> = signal.into_iter().nonvolve(filter).collect();
 
-        let expected: Vec<[f64; 4]> = EXPECTED.iter().map(|&x| [x, x, x, x]).collect();
+        let expected: Vec<[f64; N]> = EXPECTED.iter().map(|&x| [x; N]).collect();
         assert_eq!(expected, convolution);
     }
 }
