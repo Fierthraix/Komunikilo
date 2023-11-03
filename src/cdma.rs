@@ -83,6 +83,16 @@ mod tests {
     use crate::hadamard::HadamardMatrix;
     use rstest::rstest;
 
+    fn ber(tx: &[Bit], rx: &[Bit]) -> f64 {
+        let len: usize = std::cmp::min(tx.len(), rx.len());
+        let errors: usize = tx
+            .iter()
+            .zip(rx.iter())
+            .map(|(&ti, &ri)| if ti == ri { 0 } else { 1 })
+            .sum();
+        (errors as f64) / (len as f64)
+    }
+
     #[rstest]
     #[case(2)]
     #[case(4)]
@@ -112,84 +122,117 @@ mod tests {
     #[case(2)]
     #[case(4)]
     #[case(8)]
-    //#[case(16)]
-    //#[case(256)]
-    fn bpsk_cdma(#[case] matrix_size: usize) {
+    #[case(16)]
+    fn bpsk_cdma_single_user(#[case] matrix_size: usize) {
         // Simulation parameters.
-        let num_bits = 4000; //16; //4000; // How many bits to transmit overall.
+        let num_bits = 4000; // How many bits to transmit overall.
                              // Input parameters.
         let samp_rate = 44100; // Clock rate for both RX and TX.
         let symbol_rate = 900; // Rate symbols come out the things.
         let carrier_freq = 1800_f64;
-        // Derived Parameters.
-        let samples_per_symbol = samp_rate / symbol_rate;
-        let _num_samples = num_bits * samples_per_symbol;
-        //let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
 
         let mut rng = rand::thread_rng();
-        let data_bits_1: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
-        let data_bits_2: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
+        let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
         let walsh_codes = HadamardMatrix::new(matrix_size);
-        let key_1: Vec<Bit> = walsh_codes.key(0).clone();
-        let key_2: Vec<Bit> = walsh_codes.key(1).clone();
+        let key: Vec<Bit> = walsh_codes.key(0).clone();
 
         // Tx output.
-        let cdma_tx_1/*: Vec<f64>*/ = tx_cdma_bpsk_signal(
-            data_bits_1.iter().cloned(),
+        let cdma_tx: Vec<f64> = tx_cdma_bpsk_signal(
+            data_bits.iter().cloned(),
             samp_rate,
             symbol_rate,
             carrier_freq,
             0_f64,
-            &key_1,
-        );
-        // .collect();
-
-        let cdma_tx_2/*: Vec<f64>*/ = tx_cdma_bpsk_signal(
-            data_bits_2.iter().cloned(),
-            samp_rate,
-            symbol_rate,
-            carrier_freq,
-            0_f64,
-            &key_2,
-        );
-        // .collect();
-
-        let channel: Vec<f64> = cdma_tx_1.zip(cdma_tx_2).map(|(s1, s2)| s1 + s2).collect();
-
-        let cdma_rx_1: Vec<Bit> = rx_cdma_bpsk_signal(
-            channel.iter().cloned(),
-            samp_rate,
-            symbol_rate,
-            carrier_freq,
-            0_f64,
-            &key_1,
+            &key,
         )
         .collect();
 
-        let cdma_rx_2: Vec<Bit> = rx_cdma_bpsk_signal(
-            channel.iter().cloned(),
+        let cdma_rx: Vec<Bit> = rx_cdma_bpsk_signal(
+            cdma_tx.iter().cloned(),
             samp_rate,
             symbol_rate,
             carrier_freq,
             0_f64,
-            &key_2,
+            &key,
         )
         .collect();
 
-        let ber = |tx: &[Bit], rx: &[Bit]| -> f64 {
-            let len: usize = std::cmp::min(tx.len(), rx.len());
-            let errors: usize = tx
-                .iter()
-                .zip(rx.iter())
-                .map(|(&ti, &ri)| if ti == ri { 0 } else { 1 })
-                .sum();
-            (errors as f64) / (len as f64)
-        };
+        assert_eq!(data_bits, cdma_rx,);
+    }
 
-        // assert_eq!(data_bits_1, cdma_rx_1,);
-        // assert_eq!(data_bits_2, cdma_rx_2,);
-        assert!(ber(&data_bits_1, &cdma_rx_1) < 0.5);
-        assert!(ber(&data_bits_2, &cdma_rx_2) < 0.5);
+    #[rstest]
+    // #[case(2, 2)]
+    // #[case(4, 2)]
+    #[case(8, 2)]
+    #[case(8, 4)]
+    #[case(8, 6)]
+    #[case(8, 8)]
+    //#[case(16, 2)]
+    //#[case(256, 2)]
+    fn bpsk_cdma_multi_user(#[case] matrix_size: usize, #[case] num_users: usize) {
+        assert!(matrix_size >= num_users);
+
+        // Simulation parameters.
+        let num_bits = 1_000; // How many bits to transmit overall.
+                              // Input parameters.
+        let samp_rate = 44100; // Clock rate for both RX and TX.
+        let symbol_rate = 900; // Rate symbols come out the things.
+        let carrier_freq = 1800_f64;
+        let num_samples = num_bits * samp_rate / symbol_rate;
+
+        let mut rng = rand::thread_rng();
+        // The data each user will transmit.
+        let datas: Vec<Vec<Bit>> = (0..num_users)
+            .map(|_| (0..num_bits).map(|_| rng.gen::<Bit>()).collect())
+            .collect();
+
+        let walsh_codes = HadamardMatrix::new(matrix_size);
+        let keys: Vec<Vec<Bit>> = (0..num_users)
+            .map(|idx| walsh_codes.key(idx).clone())
+            .collect();
+
+        // Tx output.
+        let channel: Vec<f64> = datas
+            .iter()
+            .zip(keys.iter())
+            .map(|(&ref data, &ref key)| {
+                tx_cdma_bpsk_signal(
+                    data.iter().cloned(),
+                    samp_rate,
+                    symbol_rate,
+                    carrier_freq,
+                    0_f64,
+                    &key,
+                )
+            })
+            .fold(vec![0f64; num_samples], |mut acc, tx| {
+                acc.iter_mut().zip(tx).for_each(|(s_i, tx_i)| *s_i += tx_i);
+                acc
+            });
+
+        let rxs: Vec<Vec<Bit>> = keys
+            .iter()
+            .map(|key| {
+                rx_cdma_bpsk_signal(
+                    channel.iter().cloned(),
+                    samp_rate,
+                    symbol_rate,
+                    carrier_freq,
+                    0_f64,
+                    key,
+                )
+                .collect()
+            })
+            .collect();
+
+        let bers: Vec<f64> = rxs
+            .iter()
+            .zip(datas.iter())
+            .map(|(rx_i, data_i)| ber(rx_i, data_i))
+            .collect();
+
+        // assert_eq!(datas, rxst);
+        assert!(bers.iter().all(|&ber| ber <= 0.3));
     }
 }
