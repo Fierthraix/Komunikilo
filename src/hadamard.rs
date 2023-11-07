@@ -7,6 +7,7 @@ pub struct HadamardMatrix {
 
 impl HadamardMatrix {
     pub fn new(n: usize) -> Self {
+        assert!((n & (n - 1)) == 0);
         let mut matrix: Vec<Vec<Bit>> = vec![vec![true; n]; n];
 
         let mut i1 = 1;
