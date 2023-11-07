@@ -80,6 +80,17 @@ macro_rules! ber {
     };
 }
 
+#[inline]
+pub fn ber(tx: &[Bit], rx: &[Bit]) -> f64 {
+    let len: usize = std::cmp::min(tx.len(), rx.len());
+    let errors: usize = tx
+        .iter()
+        .zip(rx.iter())
+        .map(|(&ti, &ri)| if ti == ri { 0 } else { 1 })
+        .sum();
+    (errors as f64) / (len as f64)
+}
+
 /*
 pub fn ber<'a, I, T>(tx: I, rx: I) -> f64
 where

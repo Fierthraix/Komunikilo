@@ -79,19 +79,10 @@ mod tests {
     use super::*;
     extern crate rand;
     extern crate rand_distr;
+    use crate::ber;
     use crate::cdma::tests::rand::Rng;
     use crate::hadamard::HadamardMatrix;
     use rstest::rstest;
-
-    fn ber(tx: &[Bit], rx: &[Bit]) -> f64 {
-        let len: usize = std::cmp::min(tx.len(), rx.len());
-        let errors: usize = tx
-            .iter()
-            .zip(rx.iter())
-            .map(|(&ti, &ri)| if ti == ri { 0 } else { 1 })
-            .sum();
-        (errors as f64) / (len as f64)
-    }
 
     #[rstest]
     #[case(2)]
