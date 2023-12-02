@@ -55,8 +55,10 @@ pub fn rx_bpsk_signal<I: Iterator<Item = f64>>(
         sample * (2_f64 * PI * carrier_freq * time).cos()
     });
     real_demod
-        .chunks(samples_per_symbol)
-        .map(move |symbol| symbol.into_iter().convolve(filter.clone()).last().unwrap() > 0f64)
+        .convolve(filter)
+        .take_every(samples_per_symbol)
+        .map(|thresh_val| thresh_val > 0f64)
+        .skip(1)
 }
 
 #[cfg(test)]
