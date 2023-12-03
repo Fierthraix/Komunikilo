@@ -25,7 +25,8 @@ impl HadamardMatrix {
         Self { matrix }
     }
     pub fn key(&self, n: usize) -> &Vec<Bit> {
-        self.matrix.get(n).unwrap()
+        // TODO: FIXME: Make it more obvious there are 2^n-1 codes, instad of 2^n.
+        self.matrix.get((n % self.matrix.len()) + 1).unwrap()
     }
 }
 
