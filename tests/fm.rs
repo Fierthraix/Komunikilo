@@ -1,5 +1,5 @@
-use comms::fm::{rx_fsk, tx_fsk};
-use comms::{linspace, Bit};
+use komunikilo::fm::{rx_fsk, tx_fsk};
+use komunikilo::{linspace, Bit};
 use plotpy::{Curve, Plot};
 
 #[macro_use]

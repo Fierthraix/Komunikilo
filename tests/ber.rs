@@ -1,12 +1,12 @@
-use comms::bpsk::{
+use komunikilo::bpsk::{
     rx_baseband_bpsk_signal, rx_bpsk_signal, tx_baseband_bpsk_signal, tx_bpsk_signal,
 };
-use comms::cdma::{rx_cdma_bpsk_signal, tx_cdma_bpsk_signal};
-use comms::hadamard::HadamardMatrix;
-use comms::qpsk::{
+use komunikilo::cdma::{rx_cdma_bpsk_signal, tx_cdma_bpsk_signal};
+use komunikilo::hadamard::HadamardMatrix;
+use komunikilo::qpsk::{
     rx_baseband_qpsk_signal, rx_qpsk_signal, tx_baseband_qpsk_signal, tx_qpsk_signal,
 };
-use comms::{awgn_complex, erfc, linspace, Bit};
+use komunikilo::{awgn_complex, erfc, linspace, Bit};
 use num::complex::Complex;
 use plotpy::{Curve, Plot};
 use rand::Rng;

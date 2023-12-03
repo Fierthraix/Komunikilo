@@ -1,8 +1,8 @@
-use comms::bpsk::tx_bpsk_signal;
-use comms::cdma::{rx_cdma_bpsk_signal, tx_cdma_bpsk_signal};
-use comms::hadamard::HadamardMatrix;
-use comms::iter::Iter;
-use comms::{awgn, bit_to_nrz, Bit};
+use komunikilo::bpsk::tx_bpsk_signal;
+use komunikilo::cdma::{rx_cdma_bpsk_signal, tx_cdma_bpsk_signal};
+use komunikilo::hadamard::HadamardMatrix;
+use komunikilo::iter::Iter;
+use komunikilo::{awgn, bit_to_nrz, Bit};
 use plotpy::{Curve, Plot};
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;

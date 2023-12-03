@@ -1,5 +1,5 @@
-use comms::bpsk::{rx_bpsk_signal, tx_bpsk_signal};
-use comms::{awgn, Bit};
+use komunikilo::bpsk::{rx_bpsk_signal, tx_bpsk_signal};
+use komunikilo::{awgn, Bit};
 use plotpy::{Curve, Plot};
 use welch_sde::{Build, PowerSpectrum, SpectralDensity};
 

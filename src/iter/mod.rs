@@ -15,7 +15,7 @@ use crate::iter::take_every::Take;
 pub trait Iter: Iterator {
     ///
     /// ```rust
-    /// # use comms::iter::Iter;
+    /// # use komunikilo::iter::Iter;
     /// ```
     fn chunks<T>(self, num_chunks: usize) -> Chunks<T, Self>
     where
@@ -27,7 +27,7 @@ pub trait Iter: Iterator {
 
     ///
     /// ```rust
-    /// # use comms::iter::Iter;
+    /// # use komunikilo::iter::Iter;
     /// ```
     fn convolve<T>(self, filter: Vec<T>) -> Convolver<T, Self>
     where
@@ -39,7 +39,7 @@ pub trait Iter: Iterator {
 
     ///
     /// ```rust
-    /// # use comms::iter::Iter;
+    /// # use komunikilo::iter::Iter;
     /// ```
     fn nonvolve<T, const N: usize>(self, filter: Vec<T>) -> Nonvolver<T, Self, N>
     where
@@ -51,7 +51,7 @@ pub trait Iter: Iterator {
 
     /// Makes `copies` copies of an input iterator.
     /// ```rust
-    /// # use comms::iter::Iter;
+    /// # use komunikilo::iter::Iter;
     /// let copies = 5;
     /// let first: Vec<usize> = (0..5).flat_map(|x| std::iter::repeat(x).take(copies)).collect();
     /// let second: Vec<usize> = (0..5).into_iter().inflate(copies).collect();
@@ -67,7 +67,7 @@ pub trait Iter: Iterator {
 
     /// Like `.sum()`, except it returns all intermediate values.
     /// ```rust
-    /// # use comms::iter::Iter;
+    /// # use komunikilo::iter::Iter;
     /// let num = 1426;
     /// let first: Vec<usize> = (1..num + 1).into_iter().collect();
     /// let second: Vec<usize> = [1].into_iter().cycle().take(num).integrate().collect();
@@ -83,7 +83,7 @@ pub trait Iter: Iterator {
 
     /// Integrate a simultaneous stream of numbers.
     /// ```rust
-    /// # use comms::iter::Iter;
+    /// # use komunikilo::iter::Iter;
     /// const N: usize = 4;
     /// let first: Vec<[usize; N]> = (1..100 + 1).into_iter().map(|x| [x; N]).collect();
     /// let second: Vec<[usize; N]> = [1]
@@ -105,7 +105,7 @@ pub trait Iter: Iterator {
 
     /// Equivalent to:
     /// ```rust
-    /// # use comms::iter::Iter;
+    /// # use komunikilo::iter::Iter;
     /// let frequency = 5;
     /// let first: Vec<usize> = (0..100)
     ///     .enumerate()
