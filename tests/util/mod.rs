@@ -26,6 +26,14 @@ macro_rules! ber_plot {
     ($x:expr, $y1:expr, $y2:expr, $name:expr) => {
         plot!($x, $y1, $y2, true, $name)
     };
+    ($x:expr, $y:expr, $name:expr) => {
+        let mut plot = Plot::new();
+        let mut curve = Curve::new();
+        curve.draw(&$x, &$y);
+        plot.add(&curve);
+        plot.set_log_y(true);
+        plot.save($name).unwrap();
+    };
 }
 
 macro_rules! error {
@@ -48,4 +56,28 @@ pub fn not_inf(num: f64) -> f64 {
     } else {
         num
     }
+}
+
+pub fn save_vector(v: &[f64], filename: &str) -> Result<(), std::io::Error> {
+    let mut w = csv::Writer::from_writer(std::fs::File::create(filename)?);
+
+    w.write_record(&["v (V)"])?;
+
+    for i in v {
+        w.write_record(&[i.to_string()])?;
+    }
+
+    Ok(())
+}
+
+pub fn save_vector2(v: &[f64], t: &[f64], filename: &str) -> Result<(), std::io::Error> {
+    let mut w = csv::Writer::from_writer(std::fs::File::create(filename)?);
+
+    w.write_record(&["t (s)", "v (V)"])?;
+
+    for (v_i, t_i) in v.iter().zip(t.iter()) {
+        w.write_record(&[t_i.to_string(), v_i.to_string()])?;
+    }
+
+    Ok(())
 }
