@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct Inflate<T, I>
 where
     I: Iterator<Item = T>,
