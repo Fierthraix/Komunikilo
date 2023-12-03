@@ -12,10 +12,14 @@ rand_distr = "0.4"
 itertools = "0.10"
 rustfft = "6.1"
 assert_approx_eq = "1.1"
+easyfft = "0.4"
+reed-solomon-novelpoly = "1.0"
+reed-solomon-erasure = "4.0"
 
 [dev-dependencies]
 plotpy = "0.4"
 rayon = "1.7"
 welch-sde = "0.1"
-#complot = "0.3"
 rstest = "0.18"
+csv = "1.3"
+pyo3 = {version = "0.20", features = ["auto-initialize"]}
