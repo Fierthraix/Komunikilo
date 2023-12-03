@@ -57,10 +57,11 @@ fn bpsk_graphs() {
 
     plot!(t, tx, "/tmp/bpsk_tx.png");
     plot!(t, tx, noisy_signal, "/tmp/bpsk_tx_awgn.png");
+
     // plot!(t, rx_clean, rx_dirty, "/tmp/bpsk_rx_awgn.png");
     println!("ERROR: {}", error!(rx_clean, rx_dirty));
     assert!(error!(rx_clean, rx_dirty) <= 0.2);
-    // assert_eq!(rx_clean, rx_dirty);
+    assert_eq!(rx_clean, rx_dirty);
 
     let psd: SpectralDensity<f64> = SpectralDensity::builder(&noisy_signal, carrier_freq).build();
     let sd = psd.periodogram();
