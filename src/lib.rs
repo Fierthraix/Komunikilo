@@ -13,8 +13,13 @@ pub mod hadamard;
 pub mod iter;
 mod logistic_map;
 pub mod qpsk;
+mod turbo;
 
 pub type Bit = bool;
+
+fn is_int(num: f64) -> bool {
+    num == (num as u64) as f64
+}
 
 #[inline]
 pub fn db(x: f64) -> f64 {

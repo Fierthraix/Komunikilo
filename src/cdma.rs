@@ -1,5 +1,5 @@
 use crate::bpsk::{rx_bpsk_signal, tx_bpsk_signal};
-use crate::{iter::Iter, Bit};
+use crate::{bit_to_nrz, is_int, iter::Iter, Bit};
 
 pub fn tx_baseband_cdma<'a, I>(message: I, key: &'a [Bit]) -> impl Iterator<Item = Bit> + 'a
 where
@@ -31,6 +31,8 @@ where
         })
 }
 
+/// A function where:
+/// $ s_k(t) = d_k(t) c_k(t) cos(\omega_c t) $
 pub fn tx_cdma_bpsk_signal<'a, I>(
     message: I,
     sample_rate: usize,
@@ -42,17 +44,22 @@ pub fn tx_cdma_bpsk_signal<'a, I>(
 where
     I: Iterator<Item = Bit> + 'a,
 {
-    tx_bpsk_signal(
-        tx_baseband_cdma(message, key),
-        sample_rate,
-        symbol_rate * key.len(),
-        carrier_freq,
-        start_time,
-    )
+    assert!(sample_rate / 2 >= key.len() * symbol_rate);
+    assert!(sample_rate / 2 >= carrier_freq as usize);
+    assert!(is_int(sample_rate as f64 / symbol_rate as f64));
+    assert!(is_int(
+        sample_rate as f64 / (symbol_rate as f64 * key.len() as f64)
+    ));
+    let samples_per_symbol: usize = sample_rate / symbol_rate;
+    let samples_per_chip: usize = samples_per_symbol / key.len();
+
+    tx_bpsk_signal(message, sample_rate, symbol_rate, carrier_freq, start_time)
+        .zip(key.iter().inflate(samples_per_chip).cycle())
+        .map(|(s_i, &keybit)| s_i * bit_to_nrz(keybit))
 }
 
 pub fn rx_cdma_bpsk_signal<'a, I>(
-    message: I,
+    signal: I,
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
@@ -62,15 +69,24 @@ pub fn rx_cdma_bpsk_signal<'a, I>(
 where
     I: Iterator<Item = f64> + 'a,
 {
-    rx_baseband_cdma(
-        rx_bpsk_signal(
-            message,
-            sample_rate,
-            symbol_rate * key.len(),
-            carrier_freq,
-            start_time,
-        ),
-        key,
+    assert!(sample_rate / 2 >= key.len() * symbol_rate);
+    assert!(sample_rate / 2 >= carrier_freq as usize);
+    assert!(is_int(sample_rate as f64 / symbol_rate as f64));
+    assert!(is_int(
+        sample_rate as f64 / (symbol_rate as f64 * key.len() as f64)
+    ));
+    let samples_per_symbol: usize = sample_rate / symbol_rate;
+    let samples_per_chip: usize = samples_per_symbol / key.len();
+    let chip_xored_signal = signal
+        .zip(key.iter().inflate(samples_per_chip).cycle())
+        .map(|(s_i, &keybit)| s_i * bit_to_nrz(keybit));
+
+    rx_bpsk_signal(
+        chip_xored_signal,
+        sample_rate,
+        symbol_rate,
+        carrier_freq,
+        start_time,
     )
 }
 
@@ -79,7 +95,6 @@ mod tests {
     use super::*;
     extern crate rand;
     extern crate rand_distr;
-    use crate::ber;
     use crate::cdma::tests::rand::Rng;
     use crate::hadamard::HadamardMatrix;
     use rstest::rstest;
@@ -114,13 +129,15 @@ mod tests {
     #[case(4)]
     #[case(8)]
     #[case(16)]
+    #[case(32)]
+    #[case(64)]
     fn bpsk_cdma_single_user(#[case] matrix_size: usize) {
         // Simulation parameters.
         let num_bits = 4000; // How many bits to transmit overall.
                              // Input parameters.
-        let samp_rate = 44100; // Clock rate for both RX and TX.
-        let symbol_rate = 900; // Rate symbols come out the things.
-        let carrier_freq = 1800_f64;
+        let samp_rate = 128_000; // Clock rate for both RX and TX.
+        let symbol_rate = 1000; // Rate symbols come out the things.
+        let carrier_freq = 2500_f64;
 
         let mut rng = rand::thread_rng();
         let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
@@ -149,27 +166,27 @@ mod tests {
         )
         .collect();
 
-        assert_eq!(data_bits, cdma_rx,);
+        assert_eq!(data_bits, cdma_rx);
     }
 
     #[rstest]
-    // #[case(2, 2)]
-    // #[case(4, 2)]
-    #[case(8, 2)]
-    #[case(8, 4)]
-    #[case(8, 6)]
-    #[case(8, 8)]
-    //#[case(16, 2)]
-    //#[case(256, 2)]
+    #[case(4, 3)]
+    #[case(8, 7)]
+    #[case(16, 15)]
+    #[case(32, 31)]
+    #[case(64, 63)]
     fn bpsk_cdma_multi_user(#[case] matrix_size: usize, #[case] num_users: usize) {
         assert!(matrix_size >= num_users);
 
         // Simulation parameters.
         let num_bits = 1_000; // How many bits to transmit overall.
                               // Input parameters.
-        let samp_rate = 44100; // Clock rate for both RX and TX.
-        let symbol_rate = 900; // Rate symbols come out the things.
-        let carrier_freq = 1800_f64;
+        let samp_rate = match matrix_size {
+            32 | 64 => 256_000,
+            _ => 80_000,
+        };
+        let symbol_rate = 1000; // Rate symbols come out the things.
+        let carrier_freq = 2500_f64;
         let num_samples = num_bits * samp_rate / symbol_rate;
 
         let mut rng = rand::thread_rng();
@@ -217,13 +234,6 @@ mod tests {
             })
             .collect();
 
-        let bers: Vec<f64> = rxs
-            .iter()
-            .zip(datas.iter())
-            .map(|(rx_i, data_i)| ber(rx_i, data_i))
-            .collect();
-
-        // assert_eq!(datas, rxst);
-        assert!(bers.iter().all(|&ber| ber <= 0.3));
+        assert_eq!(rxs, datas);
     }
 }
