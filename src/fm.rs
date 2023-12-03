@@ -6,7 +6,6 @@ pub fn tx_fsk<I: Iterator<Item = Bit>>(
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
-    start_time: f64,
 ) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
@@ -18,7 +17,7 @@ pub fn tx_fsk<I: Iterator<Item = Bit>>(
         .inflate(samples_per_symbol)
         .enumerate()
         .map(move |(idx, sig)| {
-            let time = start_time + (idx as f64) * t_step;
+            let time = idx as f64 * t_step;
             (2_f64 * PI * (carrier_freq + sig * (sep / 2f64)) * time).cos()
         })
 }
@@ -28,7 +27,6 @@ pub fn rx_fsk<I: Iterator<Item = f64>>(
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
-    start_time: f64,
 ) -> impl Iterator<Item = Bit> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
@@ -38,7 +36,7 @@ pub fn rx_fsk<I: Iterator<Item = f64>>(
         .chunks(samples_per_symbol)
         .enumerate()
         .map(move |(idx, chunk)| {
-            let time = start_time + (idx as f64) * t_step * (samples_per_symbol as f64);
+            let time = idx as f64 * t_step * (samples_per_symbol as f64);
 
             let (s0, s1, s2, s3) = chunk
                 .iter()
@@ -66,7 +64,6 @@ pub fn tx_fm<I: Iterator<Item = f64>>(
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
-    start_time: f64,
 ) -> impl Iterator<Item = f64> {
     let k = 0.05;
     let samples_per_symbol: usize = sample_rate / symbol_rate;
@@ -77,7 +74,7 @@ pub fn tx_fm<I: Iterator<Item = f64>>(
         .integrate()
         .enumerate()
         .map(move |(idx, msg_cumsum)| {
-            let time = start_time + (idx as f64) * t_step;
+            let time = idx as f64 * t_step;
             (2_f64 * PI * carrier_freq * time + k * msg_cumsum).cos()
         })
 }
@@ -109,18 +106,11 @@ mod tests {
             samp_rate,
             symbol_rate,
             carrier_freq,
-            0_f64,
         )
         .collect();
 
-        let fsk_rx: Vec<Bit> = rx_fsk(
-            fsk_tx.iter().cloned(),
-            samp_rate,
-            symbol_rate,
-            carrier_freq,
-            0_f64,
-        )
-        .collect();
+        let fsk_rx: Vec<Bit> =
+            rx_fsk(fsk_tx.iter().cloned(), samp_rate, symbol_rate, carrier_freq).collect();
 
         assert_eq!(fsk_rx, data_bits);
     }

@@ -31,7 +31,6 @@ fn cdma_graphs() {
         samp_rate,
         symbol_rate,
         carrier_freq,
-        0f64,
         key,
     )
     .collect();
@@ -41,7 +40,6 @@ fn cdma_graphs() {
         samp_rate,
         symbol_rate,
         carrier_freq,
-        0f64,
         key,
     )
     .collect();
@@ -54,7 +52,6 @@ fn cdma_graphs() {
         samp_rate,
         symbol_rate,
         carrier_freq,
-        0f64,
         key,
     )
     .collect();
@@ -67,14 +64,8 @@ fn cdma_graphs() {
         })
         .collect();
 
-    let bpsk_tx: Vec<f64> = tx_bpsk_signal(
-        data.iter().cloned(),
-        samp_rate,
-        symbol_rate,
-        carrier_freq,
-        0f64,
-    )
-    .collect();
+    let bpsk_tx: Vec<f64> =
+        tx_bpsk_signal(data.iter().cloned(), samp_rate, symbol_rate, carrier_freq).collect();
     let t2: Vec<f64> = (0..bpsk_tx.len())
         .into_iter()
         .map(|idx| {
@@ -133,21 +124,14 @@ fn python_plotz() -> PyResult<()> {
         .inflate(samp_rate / symbol_rate)
         .collect();
 
-    let bpsk_tx: Vec<f64> = tx_bpsk_signal(
-        data.iter().cloned(),
-        samp_rate,
-        symbol_rate,
-        carrier_freq,
-        0f64,
-    )
-    .collect();
+    let bpsk_tx: Vec<f64> =
+        tx_bpsk_signal(data.iter().cloned(), samp_rate, symbol_rate, carrier_freq).collect();
 
     let cdma_tx: Vec<f64> = tx_cdma_bpsk_signal(
         data.iter().cloned(),
         samp_rate,
         symbol_rate,
         carrier_freq,
-        0f64,
         &key,
     )
     .collect();
@@ -254,7 +238,6 @@ fn mai_plot() {
                         samp_rate,
                         symbol_rate,
                         carrier_freq,
-                        0_f64,
                         &key,
                     )
                 })
@@ -271,7 +254,6 @@ fn mai_plot() {
                         samp_rate,
                         symbol_rate,
                         carrier_freq,
-                        0_f64,
                         &keys[idx],
                     )
                     .collect();

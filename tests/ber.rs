@@ -130,7 +130,6 @@ fn bpsk_works() {
         samp_rate,
         symbol_rate,
         carrier_freq,
-        0_f64,
     )
     .collect();
 
@@ -142,15 +141,14 @@ fn bpsk_works() {
             let sigma = not_inf((1f64 / (2f64 * i)).sqrt());
             let awgn_noise = Normal::new(0f64, sigma).unwrap();
 
-            let konst = 4.7f64;
-            // let konst = n_scale.sqrt();
+            let konst = n_scale.sqrt();
             let noisy_signal = bpsk_tx
                 .iter()
                 .cloned()
                 .zip(awgn_noise.sample_iter(rand::thread_rng()))
                 .map(|(symb, noise)| symb + noise * konst);
 
-            let rx = rx_bpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq, 0_f64);
+            let rx = rx_bpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq);
 
             rx.zip(data_bits.iter())
                 .map(|(rx, &tx)| if rx == tx { 0f64 } else { 1f64 })
@@ -188,7 +186,6 @@ fn qpsk_works() {
         samp_rate,
         symbol_rate,
         carrier_freq,
-        0_f64,
     )
     .collect();
 
@@ -205,7 +202,7 @@ fn qpsk_works() {
                 .cloned()
                 .zip(normal.sample_iter(rand::thread_rng()))
                 .map(|(symb, noise)| symb + noise * konst);
-            let rx = rx_qpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq, 0_f64);
+            let rx = rx_qpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq);
 
             rx.zip(data_bits.iter())
                 .map(|(rx, &tx)| if rx == tx { 0f64 } else { 1f64 })
@@ -247,7 +244,6 @@ fn cdma_works() {
         samp_rate,
         symbol_rate,
         carrier_freq,
-        0_f64,
         key,
     )
     .collect();
@@ -265,14 +261,7 @@ fn cdma_works() {
                 .cloned()
                 .zip(normal.sample_iter(rand::thread_rng()))
                 .map(|(symb, noise)| symb + noise * konst);
-            let rx = rx_cdma_bpsk_signal(
-                noisy_signal,
-                samp_rate,
-                symbol_rate,
-                carrier_freq,
-                0_f64,
-                key,
-            );
+            let rx = rx_cdma_bpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq, key);
 
             rx.zip(data_bits.iter())
                 .map(|(rx, &tx)| if rx == tx { 0f64 } else { 1f64 })

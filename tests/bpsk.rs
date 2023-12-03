@@ -17,23 +17,11 @@ fn bpsk_graphs() {
     let symbol_rate = 900; // Rate symbols come out the things.
     let carrier_freq = 1800_f64;
 
-    let tx: Vec<f64> = tx_bpsk_signal(
-        data.iter().cloned(),
-        samp_rate,
-        symbol_rate,
-        carrier_freq,
-        0f64,
-    )
-    .collect();
+    let tx: Vec<f64> =
+        tx_bpsk_signal(data.iter().cloned(), samp_rate, symbol_rate, carrier_freq).collect();
 
-    let rx_clean: Vec<Bit> = rx_bpsk_signal(
-        tx.iter().cloned(),
-        samp_rate,
-        symbol_rate,
-        carrier_freq,
-        0f64,
-    )
-    .collect();
+    let rx_clean: Vec<Bit> =
+        rx_bpsk_signal(tx.iter().cloned(), samp_rate, symbol_rate, carrier_freq).collect();
 
     let sigma = 2f64;
     let noisy_signal: Vec<f64> = awgn(tx.iter().cloned(), sigma).collect();
@@ -43,7 +31,6 @@ fn bpsk_graphs() {
         samp_rate,
         symbol_rate,
         carrier_freq,
-        0f64,
     )
     .collect();
 

@@ -19,9 +19,8 @@ fn qpsk_graphs() {
     let fc = 1800_f64;
     let symb_rate = 900;
 
-    let tx: Vec<f64> =
-        tx_qpsk_signal(data.iter().cloned(), samp_rate, symb_rate, fc, 0f64).collect();
-    let rx: Vec<Bit> = rx_qpsk_signal(tx.iter().cloned(), samp_rate, symb_rate, fc, 0f64).collect();
+    let tx: Vec<f64> = tx_qpsk_signal(data.iter().cloned(), samp_rate, symb_rate, fc).collect();
+    let rx: Vec<Bit> = rx_qpsk_signal(tx.iter().cloned(), samp_rate, symb_rate, fc).collect();
 
     /*
     let xtx: Vec<f64> = linspace(0f64, 1f64, tx.len()).collect();

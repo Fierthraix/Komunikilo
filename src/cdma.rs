@@ -38,7 +38,6 @@ pub fn tx_cdma_bpsk_signal<'a, I>(
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
-    start_time: f64,
     key: &'a [Bit],
 ) -> impl Iterator<Item = f64> + '_
 where
@@ -53,7 +52,7 @@ where
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let samples_per_chip: usize = samples_per_symbol / key.len();
 
-    tx_bpsk_signal(message, sample_rate, symbol_rate, carrier_freq, start_time)
+    tx_bpsk_signal(message, sample_rate, symbol_rate, carrier_freq)
         .zip(key.iter().inflate(samples_per_chip).cycle())
         .map(|(s_i, &keybit)| s_i * bit_to_nrz(keybit))
 }
@@ -63,7 +62,6 @@ pub fn rx_cdma_bpsk_signal<'a, I>(
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
-    start_time: f64,
     key: &'a [Bit],
 ) -> impl Iterator<Item = Bit> + '_
 where
@@ -81,13 +79,7 @@ where
         .zip(key.iter().inflate(samples_per_chip).cycle())
         .map(|(s_i, &keybit)| s_i * bit_to_nrz(keybit));
 
-    rx_bpsk_signal(
-        chip_xored_signal,
-        sample_rate,
-        symbol_rate,
-        carrier_freq,
-        start_time,
-    )
+    rx_bpsk_signal(chip_xored_signal, sample_rate, symbol_rate, carrier_freq)
 }
 
 #[cfg(test)]
@@ -151,7 +143,6 @@ mod tests {
             samp_rate,
             symbol_rate,
             carrier_freq,
-            0_f64,
             &key,
         )
         .collect();
@@ -161,7 +152,6 @@ mod tests {
             samp_rate,
             symbol_rate,
             carrier_freq,
-            0_f64,
             &key,
         )
         .collect();
@@ -210,7 +200,6 @@ mod tests {
                     samp_rate,
                     symbol_rate,
                     carrier_freq,
-                    0_f64,
                     &key,
                 )
             })
@@ -227,7 +216,6 @@ mod tests {
                     samp_rate,
                     symbol_rate,
                     carrier_freq,
-                    0_f64,
                     key,
                 )
                 .collect()

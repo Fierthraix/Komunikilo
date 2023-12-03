@@ -25,7 +25,6 @@ pub fn tx_qpsk_signal<I: Iterator<Item = Bit>>(
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
-    start_time: f64,
 ) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
@@ -35,7 +34,7 @@ pub fn tx_qpsk_signal<I: Iterator<Item = Bit>>(
         .enumerate()
         .map(move |(idx, (bit1, bit2))| {
             // println!("{}: {}  {}", idx, bit1, bit2);
-            let time = (idx as f64) * t_step + start_time;
+            let time = (idx as f64) * t_step;
             let i_t = bit_to_nrz(bit1) * (2f64 * PI * carrier_freq * time).cos();
             let q_t = -bit_to_nrz(bit2) * (2f64 * PI * carrier_freq * time).sin();
 
@@ -48,7 +47,6 @@ pub fn rx_qpsk_signal<I: Iterator<Item = f64>>(
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
-    start_time: f64,
 ) -> impl Iterator<Item = Bit> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
@@ -58,7 +56,7 @@ pub fn rx_qpsk_signal<I: Iterator<Item = f64>>(
     message
         .enumerate()
         .map(move |(idx, sample)| {
-            let time = start_time + (idx as f64) * t_step;
+            let time = idx as f64 * t_step;
             let ii = sample * (2_f64 * PI * carrier_freq * time).cos();
             let qi = sample * -(2_f64 * PI * carrier_freq * time).sin();
 
@@ -110,7 +108,6 @@ mod tests {
             samp_rate,
             symbol_rate,
             carrier_freq,
-            0f64,
         )
         .collect();
 
@@ -119,7 +116,6 @@ mod tests {
             samp_rate,
             symbol_rate,
             carrier_freq,
-            0f64,
         )
         .collect();
 

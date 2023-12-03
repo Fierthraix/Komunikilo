@@ -25,7 +25,6 @@ pub fn tx_bpsk_signal<I: Iterator<Item = Bit>>(
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
-    start_time: f64,
 ) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
@@ -35,7 +34,7 @@ pub fn tx_bpsk_signal<I: Iterator<Item = Bit>>(
         .inflate(samples_per_symbol)
         .enumerate()
         .map(move |(idx, msg_val)| {
-            let time = start_time + (idx as f64) * t_step;
+            let time = idx as f64 * t_step;
             msg_val * (2_f64 * PI * carrier_freq * time).cos()
         })
 }
@@ -45,13 +44,12 @@ pub fn rx_bpsk_signal<I: Iterator<Item = f64>>(
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
-    start_time: f64,
 ) -> impl Iterator<Item = Bit> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
     let filter: Vec<f64> = (0..samples_per_symbol).map(|_| 1f64).collect();
     let real_demod = message.enumerate().map(move |(idx, sample)| {
-        let time = start_time + (idx as f64) * t_step;
+        let time = idx as f64 * t_step;
         sample * (2_f64 * PI * carrier_freq * time).cos()
     });
     real_demod
@@ -105,7 +103,6 @@ mod tests {
             samp_rate,
             symbol_rate,
             carrier_freq,
-            0_f64,
         )
         .collect();
 
@@ -114,7 +111,6 @@ mod tests {
             samp_rate,
             symbol_rate,
             carrier_freq,
-            0_f64,
         )
         .collect();
 
