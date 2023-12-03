@@ -69,7 +69,6 @@ mod tests {
     extern crate rand;
     extern crate rand_distr;
     use crate::bpsk::tests::rand::Rng;
-    use plotpy::{Curve, Plot};
 
     #[test]
     fn baseband() {
@@ -118,21 +117,6 @@ mod tests {
             0_f64,
         )
         .collect();
-
-        let samples_per_symbol: usize = samp_rate / symbol_rate;
-        let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
-
-        let x =
-            |y: &Vec<f64>| -> Vec<f64> { (0..y.len()).map(|idx| idx as f64 * t_step).collect() };
-
-        let mut curve_tx = Curve::new();
-        curve_tx.draw(&x(&bpsk_tx), &bpsk_tx);
-
-        let mut plot_tx = Plot::new();
-        plot_tx.add(&curve_tx);
-
-        // TODO: Add AWGN to graphic.
-        plot_tx.save("/tmp/bpsk_tx.png").unwrap();
 
         assert_eq!(bpsk_rx, data_bits);
     }
