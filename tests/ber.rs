@@ -142,8 +142,8 @@ fn bpsk_works() {
             let sigma = not_inf((1f64 / (2f64 * i)).sqrt());
             let awgn_noise = Normal::new(0f64, sigma).unwrap();
 
-            // let konst = 4.7f64;
-            let konst = n_scale.sqrt();
+            let konst = 4.7f64;
+            // let konst = n_scale.sqrt();
             let noisy_signal = bpsk_tx
                 .iter()
                 .cloned()
@@ -225,16 +225,16 @@ fn qpsk_works() {
 fn cdma_works() {
     // Simulation parameters.
     let num_bits = 4_000; //1_000_000; //4000; // How many bits to transmit overall.
-    let samp_rate = 44100; // Clock rate for both RX and TX.
-    let symbol_rate = 800; // Rate symbols come out the things.
-    let carrier_freq = 2000f64;
+    let samp_rate = 80_000; // Clock rate for both RX and TX.
+    let symbol_rate = 1000; // Rate symbols come out the things.
+    let carrier_freq = 2500f64;
     let n_scale = samp_rate as f64 / carrier_freq as f64;
 
     // Test data.
     let mut rng = rand::thread_rng();
     let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
-    let h = HadamardMatrix::new(16);
-    let key = h.key(0);
+    let h = HadamardMatrix::new(8);
+    let key = h.key(2);
 
     // An x-axis for plotting Eb/N0.
     let xmin = f64::MIN_POSITIVE;
