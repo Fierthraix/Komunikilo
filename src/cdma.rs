@@ -89,6 +89,7 @@ mod tests {
     extern crate rand_distr;
     use crate::cdma::tests::rand::Rng;
     use crate::hadamard::HadamardMatrix;
+    use rayon::prelude::*;
     use rstest::rstest;
 
     #[rstest]
@@ -209,7 +210,7 @@ mod tests {
             });
 
         let rxs: Vec<Vec<Bit>> = keys
-            .iter()
+            .par_iter()
             .map(|key| {
                 rx_cdma_bpsk_signal(
                     channel.iter().cloned(),
