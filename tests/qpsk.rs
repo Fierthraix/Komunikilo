@@ -1,6 +1,7 @@
 use komunikilo::qpsk::{rx_qpsk_signal, tx_qpsk_signal};
 use komunikilo::{awgn, iter::Iter, Bit};
-use plotpy::{Curve, Plot};
+use pyo3::prelude::*;
+use pyo3::types::IntoPyDict;
 use welch_sde::{Build, PowerSpectrum, SpectralDensity};
 
 #[macro_use]

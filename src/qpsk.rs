@@ -73,7 +73,6 @@ mod tests {
 
     use super::*;
     extern crate itertools;
-    extern crate plotpy;
     extern crate rand;
     extern crate rand_distr;
     use crate::qpsk::tests::rand::Rng;

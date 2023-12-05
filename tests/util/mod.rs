@@ -1,24 +1,70 @@
+use pyo3::prelude::*;
+use pyo3::types::IntoPyDict;
+
+macro_rules! init_matplotlib {
+    ($py: expr) => {{
+        let matplotlib = $py.import("matplotlib").unwrap();
+        let plt = $py.import("matplotlib.pyplot").unwrap();
+        let locals = [("matplotlib", matplotlib), ("plt", plt)].into_py_dict($py);
+        $py.eval("matplotlib.use('agg')", None, Some(&locals))
+            .unwrap();
+        locals
+    }};
+}
+
 macro_rules! plot {
     ($x:expr, $y:expr, $name:expr) => {
-        let mut plot = Plot::new();
-        let mut curve = Curve::new();
-        curve.draw(&$x, &$y);
-        plot.add(&curve);
-        plot.save($name).unwrap();
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let locals = init_matplotlib!(py);
+
+            locals.set_item("x", &$x).unwrap();
+            locals.set_item("y", &$y).unwrap();
+            let (fig, axes): (&PyAny, &PyAny) = py
+                .eval("plt.subplots(1)", None, Some(&locals))
+                .unwrap()
+                .extract()
+                .unwrap();
+            locals.set_item("fig", fig).unwrap();
+            locals.set_item("axes", axes).unwrap();
+            py.eval("fig.set_size_inches(16, 9)", None, Some(&locals))
+                .unwrap();
+            py.eval("axes.plot(x, y)", None, Some(&locals)).unwrap();
+            py.eval(&format!("fig.savefig('{}')", $name), None, Some(&locals))
+                .unwrap();
+            py.eval("plt.close('all')", None, Some(&locals)).unwrap();
+        })
     };
     ($x:expr, $y1:expr, $y2:expr, $name:expr) => {
         plot!($x, $y1, $y2, false, $name)
     };
     ($x:expr, $y1:expr, $y2:expr, $log:expr, $name:expr) => {
-        let mut plot = Plot::new();
-        let mut curve1 = Curve::new();
-        let mut curve2 = Curve::new();
-        curve1.draw(&$x, &$y1);
-        curve2.draw(&$x, &$y2);
-        plot.add(&curve1);
-        plot.add(&curve2);
-        plot.set_log_y($log);
-        plot.save($name).unwrap();
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let locals = init_matplotlib!(py);
+
+            locals.set_item("x", &$x).unwrap();
+            locals.set_item("y1", &$y1).unwrap();
+            locals.set_item("y2", &$y2).unwrap();
+            let (fig, axes): (&PyAny, &PyAny) = py
+                .eval("plt.subplots(1)", None, Some(&locals))
+                .unwrap()
+                .extract()
+                .unwrap();
+            locals.set_item("fig", fig).unwrap();
+            locals.set_item("axes", axes).unwrap();
+            py.eval("fig.set_size_inches(16, 9)", None, Some(&locals))
+                .unwrap();
+            if $log {
+                py.eval("axes.set_yscale('log')", None, Some(&locals))
+                    .unwrap();
+            }
+            py.eval("axes.plot(x, y1)", None, Some(&locals)).unwrap();
+            py.eval("axes.plot(x, y2)", None, Some(&locals)).unwrap();
+            py.eval(&format!("fig.savefig('{}')", $name), None, Some(&locals))
+                .unwrap();
+            py.eval("plt.close('all')", None, Some(&locals)).unwrap();
+        })
     };
 }
 
@@ -27,12 +73,30 @@ macro_rules! ber_plot {
         plot!($x, $y1, $y2, true, $name)
     };
     ($x:expr, $y:expr, $name:expr) => {
-        let mut plot = Plot::new();
-        let mut curve = Curve::new();
-        curve.draw(&$x, &$y);
-        plot.add(&curve);
-        plot.set_log_y(true);
-        plot.save($name).unwrap();
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let locals = init_matplotlib!(py);
+
+            locals.set_item("x", &$x).unwrap();
+            locals.set_item("y", &$y).unwrap();
+            let (fig, axes): (&PyAny, &PyAny) = py
+                .eval("plt.subplots(1)", None, Some(&locals))
+                .unwrap()
+                .extract()
+                .unwrap();
+            locals.set_item("fig", fig).unwrap();
+            locals.set_item("axes", axes).unwrap();
+            py.eval("fig.set_size_inches(16, 9)", None, Some(&locals))
+                .unwrap();
+            if $log {
+                py.eval("axes.set_yscale('log')", None, Some(&locals))
+                    .unwrap();
+            }
+            py.eval("axes.plot(x, y)", None, Some(&locals)).unwrap();
+            py.eval(&format!("fig.savefig('{}')", $name), None, Some(&locals))
+                .unwrap();
+            py.eval("plt.close('all')", None, Some(&locals)).unwrap();
+        })
     };
 }
 

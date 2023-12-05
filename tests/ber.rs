@@ -8,7 +8,8 @@ use komunikilo::qpsk::{
 };
 use komunikilo::{awgn_complex, erfc, linspace, Bit};
 use num::complex::Complex;
-use plotpy::{Curve, Plot};
+use pyo3::prelude::*;
+use pyo3::types::IntoPyDict;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use rayon::prelude::*;
@@ -60,6 +61,7 @@ fn baseband_bpsk_works() {
 
     let y_theory: Vec<f64> = x.iter().map(|&x| ber_bpsk(x)).collect();
 
+    pyo3::prepare_freethreaded_python();
     ber_plot!(x, y, y_theory, "/tmp/ber_baseband_bpsk.png");
 
     let bpsk_rx: Vec<Bit> = rx_baseband_bpsk_signal(bpsk_tx.iter().cloned()).collect();
@@ -100,6 +102,7 @@ fn baseband_qpsk_works() {
 
     let y_theory: Vec<f64> = x.iter().map(|&x| ber_qpsk(x)).collect();
 
+    pyo3::prepare_freethreaded_python();
     ber_plot!(x, y, y_theory, "/tmp/ber_baseband_qpsk.png");
 
     let qpsk_rx: Vec<Bit> = rx_baseband_qpsk_signal(qpsk_tx.iter().cloned()).collect();
@@ -159,6 +162,7 @@ fn bpsk_works() {
 
     let y_theory: Vec<f64> = x.iter().cloned().map(ber_bpsk).collect();
 
+    pyo3::prepare_freethreaded_python();
     ber_plot!(x, y, y_theory, "/tmp/ber_bpsk.png");
 }
 
@@ -213,6 +217,7 @@ fn qpsk_works() {
 
     let y_theory: Vec<f64> = x.iter().map(|&x| ber_qpsk(x)).collect();
 
+    pyo3::prepare_freethreaded_python();
     ber_plot!(x, y, y_theory, "/tmp/ber_qpsk.png");
     plot!(x, y, y_theory, "/tmp/ber_qpsk_unlog.png");
     // plot2!(x, y, y_theory, "/tmp/ber_qpsk_unlog2.png");
@@ -272,6 +277,7 @@ fn cdma_works() {
 
     let y_theory: Vec<f64> = x.iter().map(|&x| ber_qpsk(x)).collect();
 
+    pyo3::prepare_freethreaded_python();
     ber_plot!(x, y, y_theory, "/tmp/ber_cdma.png");
     plot!(x, y, y_theory, "/tmp/ber_cdma_unlog.png");
 }

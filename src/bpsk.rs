@@ -63,7 +63,6 @@ pub fn rx_bpsk_signal<I: Iterator<Item = f64>>(
 mod tests {
     use super::*;
     extern crate itertools;
-    extern crate plotpy;
     extern crate rand;
     extern crate rand_distr;
     use crate::bpsk::tests::rand::Rng;

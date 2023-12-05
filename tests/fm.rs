@@ -1,6 +1,7 @@
 use komunikilo::fm::{rx_fsk, tx_fsk};
 use komunikilo::{linspace, Bit};
-use plotpy::{Curve, Plot};
+use pyo3::prelude::*;
+use pyo3::types::IntoPyDict;
 
 #[macro_use]
 mod util;
