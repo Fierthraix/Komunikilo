@@ -14,7 +14,6 @@ macro_rules! init_matplotlib {
 
 macro_rules! plot {
     ($x:expr, $y:expr, $name:expr) => {
-        pyo3::prepare_freethreaded_python();
         Python::with_gil(|py| {
             let locals = init_matplotlib!(py);
 
@@ -39,7 +38,6 @@ macro_rules! plot {
         plot!($x, $y1, $y2, false, $name)
     };
     ($x:expr, $y1:expr, $y2:expr, $log:expr, $name:expr) => {
-        pyo3::prepare_freethreaded_python();
         Python::with_gil(|py| {
             let locals = init_matplotlib!(py);
 
@@ -73,7 +71,6 @@ macro_rules! ber_plot {
         plot!($x, $y1, $y2, true, $name)
     };
     ($x:expr, $y:expr, $name:expr) => {
-        pyo3::prepare_freethreaded_python();
         Python::with_gil(|py| {
             let locals = init_matplotlib!(py);
 
