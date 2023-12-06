@@ -48,11 +48,12 @@ pub fn rx_bpsk_signal<I: Iterator<Item = f64>>(
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
     let filter: Vec<f64> = (0..samples_per_symbol).map(|_| 1f64).collect();
-    let real_demod = message.enumerate().map(move |(idx, sample)| {
-        let time = idx as f64 * t_step;
-        sample * (2_f64 * PI * carrier_freq * time).cos()
-    });
-    real_demod
+    message
+        .enumerate()
+        .map(move |(idx, sample)| {
+            let time = idx as f64 * t_step;
+            sample * (2_f64 * PI * carrier_freq * time).cos()
+        })
         .convolve(filter)
         .take_every(samples_per_symbol)
         .map(|thresh_val| thresh_val > 0f64)
