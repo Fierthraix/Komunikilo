@@ -26,12 +26,14 @@ macro_rules! plot {
                 .unwrap();
             locals.set_item("fig", fig).unwrap();
             locals.set_item("axes", axes).unwrap();
-            py.eval("fig.set_size_inches(16, 9)", None, Some(&locals))
-                .unwrap();
-            py.eval("axes.plot(x, y)", None, Some(&locals)).unwrap();
-            py.eval(&format!("fig.savefig('{}')", $name), None, Some(&locals))
-                .unwrap();
-            py.eval("plt.close('all')", None, Some(&locals)).unwrap();
+            for line in [
+                "fig.set_size_inches(16, 9)",
+                "axes.plot(x, y)",
+                &format!("fig.savefig('{}')", $name),
+                "plt.close('all')",
+            ] {
+                py.eval(line, None, Some(&locals)).unwrap();
+            }
         })
     };
     ($x:expr, $y1:expr, $y2:expr, $name:expr) => {
@@ -57,11 +59,14 @@ macro_rules! plot {
                 py.eval("axes.set_yscale('log')", None, Some(&locals))
                     .unwrap();
             }
-            py.eval("axes.plot(x, y1)", None, Some(&locals)).unwrap();
-            py.eval("axes.plot(x, y2)", None, Some(&locals)).unwrap();
-            py.eval(&format!("fig.savefig('{}')", $name), None, Some(&locals))
-                .unwrap();
-            py.eval("plt.close('all')", None, Some(&locals)).unwrap();
+            for line in [
+                "axes.plot(x, y1)",
+                "axes.plot(x, y2)",
+                &format!("fig.savefig('{}')", $name),
+                "plt.close('all')",
+            ] {
+                py.eval(line, None, Some(&locals)).unwrap();
+            }
         })
     };
 }
@@ -89,10 +94,13 @@ macro_rules! ber_plot {
                 py.eval("axes.set_yscale('log')", None, Some(&locals))
                     .unwrap();
             }
-            py.eval("axes.plot(x, y)", None, Some(&locals)).unwrap();
-            py.eval(&format!("fig.savefig('{}')", $name), None, Some(&locals))
-                .unwrap();
-            py.eval("plt.close('all')", None, Some(&locals)).unwrap();
+            for line in [
+                "axes.plot(x, y)",
+                &format!("fig.savefig('{}')", $name),
+                "plt.close('all')",
+            ] {
+                py.eval(line, None, Some(&locals)).unwrap();
+            }
         })
     };
 }

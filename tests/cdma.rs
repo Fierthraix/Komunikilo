@@ -155,44 +155,27 @@ fn python_plotz() -> PyResult<()> {
         locals.set_item("fig", fig)?;
         locals.set_item("axes", axes)?;
 
-        py.eval(
+        for line in [
             "axes[0].plot(x(data_tx, dt), data_tx, label='DATA: [1 1 0 0 1]')",
-            None,
-            Some(&locals),
-        )?;
-        py.eval(
             "axes[1].plot(x(bpsk_tx, dt), bpsk_tx, label='BPSK: (2.5kHz, 1kHz Data Rate)')",
-            None,
-            Some(&locals),
-        )?;
-        py.eval(
             "axes[2].plot(x(cdma_tx, dt), cdma_tx, label='CDMA: 8kHz Chip Rate')",
-            None,
-            Some(&locals),
-        )?;
+        ] {
+            py.eval(line, None, Some(&locals))?;
+        }
 
         locals.set_item("samp_rate", samp_rate)?;
         locals.set_item("freq", carrier_freq)?;
 
-        py.eval(
+        for line in [
             "plt.psd(bpsk_tx, Fs=samp_rate, Fc=freq)",
-            None,
-            Some(&locals),
-        )?;
-        py.eval(
             "plt.psd(cdma_tx, Fs=samp_rate, Fc=freq)",
-            None,
-            Some(&locals),
-        )?;
-        py.eval("[x.legend() for x in axes[:-1]]", None, Some(&locals))?;
-        // py.eval("plt.legend()", None, Some(&locals))?;
-        // py.eval("plt.show()", None, Some(&locals))?;
-        py.eval("fig.set_size_inches(16, 9)", None, Some(&locals))?;
-        py.eval(
+            "[x.legend() for x in axes[:-1]]",
+            "fig.set_size_inches(16, 9)",
+            // "plt.show()",
             "fig.savefig('/tmp/cdma_works.png', dpi=300)",
-            None,
-            Some(&locals),
-        )?;
+        ] {
+            py.eval(line, None, Some(&locals))?;
+        }
 
         Ok(())
     })
