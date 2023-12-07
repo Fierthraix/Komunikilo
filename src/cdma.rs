@@ -1,6 +1,10 @@
 use crate::bpsk::{rx_bpsk_signal, tx_bpsk_signal};
+use crate::qpsk::{rx_qpsk_signal, tx_qpsk_signal};
 use crate::{bit_to_nrz, is_int, iter::Iter, Bit};
 
+/// Transmits a DS-CDMA signal.
+/// Each bit of a data signal is multiplied by a key.
+/// The output rate of this function is the bitrate times the keysize.
 pub fn tx_baseband_cdma<'a, I>(message: I, key: &'a [Bit]) -> impl Iterator<Item = Bit> + 'a
 where
     I: Iterator<Item = Bit> + 'a,
@@ -11,6 +15,7 @@ where
         .map(|(bit, key)| bit ^ key) // XOR the bit with the entire key.
 }
 
+/// Transmits a DS-CDMA signal.
 pub fn rx_baseband_cdma<'a, I>(bitstream: I, key: &'a [Bit]) -> impl Iterator<Item = Bit> + '_
 where
     I: Iterator<Item = Bit> + 'a,
@@ -31,8 +36,9 @@ where
         })
 }
 
-/// A function where:
-/// $ s_k(t) = d_k(t) c_k(t) cos(\omega_c t) $
+/// Transmits a DS-CDMA/BPSK.
+/// Each symbol of a BPSK data signal is multiplied by a key.
+/// The chip rate will be `symbol_rate * key.len()`.
 pub fn tx_cdma_bpsk_signal<'a, I>(
     message: I,
     sample_rate: usize,
@@ -57,6 +63,9 @@ where
         .map(|(s_i, &keybit)| s_i * bit_to_nrz(keybit))
 }
 
+/// Transmits a DS-CDMA/BPSK.
+/// Each symbol of the signal is multiplied by a key, then
+/// received as a regular BPSK signal.
 pub fn rx_cdma_bpsk_signal<'a, I>(
     signal: I,
     sample_rate: usize,
@@ -80,6 +89,61 @@ where
         .map(|(s_i, &keybit)| s_i * bit_to_nrz(keybit));
 
     rx_bpsk_signal(chip_xored_signal, sample_rate, symbol_rate, carrier_freq)
+}
+
+/// Transmits a DS-CDMA/QPSK.
+/// Each symbol of a QPSK data signal is multiplied by a key.
+/// The chip rate will be `symbol_rate / 2 * key.len()`.
+pub fn tx_cdma_qpsk_signal<'a, I>(
+    message: I,
+    sample_rate: usize,
+    symbol_rate: usize,
+    carrier_freq: f64,
+    key: &'a [Bit],
+) -> impl Iterator<Item = f64> + '_
+where
+    I: Iterator<Item = Bit> + 'a,
+{
+    assert!(sample_rate / 2 >= key.len() * symbol_rate);
+    assert!(sample_rate / 2 >= carrier_freq as usize);
+    assert!(is_int(sample_rate as f64 / symbol_rate as f64));
+    assert!(is_int(
+        sample_rate as f64 / (symbol_rate as f64 * key.len() as f64)
+    ));
+    let samples_per_symbol: usize = sample_rate / symbol_rate;
+    let samples_per_chip: usize = samples_per_symbol / key.len();
+
+    tx_qpsk_signal(message, sample_rate, symbol_rate, carrier_freq)
+        .zip(key.iter().inflate(samples_per_chip).cycle())
+        .map(|(s_i, &keybit)| s_i * bit_to_nrz(keybit))
+}
+
+/// Transmits a DS-CDMA/QPSK.
+/// Each symbol of the signal is multiplied by a key, then
+/// received as a regular QPSK signal.
+pub fn rx_cdma_qpsk_signal<'a, I>(
+    signal: I,
+    sample_rate: usize,
+    symbol_rate: usize,
+    carrier_freq: f64,
+    key: &'a [Bit],
+) -> impl Iterator<Item = Bit> + '_
+where
+    I: Iterator<Item = f64> + 'a,
+{
+    assert!(sample_rate / 2 >= key.len() * symbol_rate);
+    assert!(sample_rate / 2 >= carrier_freq as usize);
+    assert!(is_int(sample_rate as f64 / symbol_rate as f64));
+    assert!(is_int(
+        sample_rate as f64 / (symbol_rate as f64 * key.len() as f64)
+    ));
+    let samples_per_symbol: usize = sample_rate / symbol_rate;
+    let samples_per_chip: usize = samples_per_symbol / key.len();
+    let chip_xored_signal = signal
+        .zip(key.iter().inflate(samples_per_chip).cycle())
+        .map(|(s_i, &keybit)| s_i * bit_to_nrz(keybit));
+
+    rx_qpsk_signal(chip_xored_signal, sample_rate, symbol_rate, carrier_freq)
 }
 
 #[cfg(test)]
@@ -149,6 +213,49 @@ mod tests {
         .collect();
 
         let cdma_rx: Vec<Bit> = rx_cdma_bpsk_signal(
+            cdma_tx.iter().cloned(),
+            samp_rate,
+            symbol_rate,
+            carrier_freq,
+            &key,
+        )
+        .collect();
+
+        assert_eq!(data_bits, cdma_rx);
+    }
+
+    #[rstest]
+    #[case(2)]
+    #[case(4)]
+    #[case(8)]
+    #[case(16)]
+    #[case(32)]
+    #[case(64)]
+    fn qpsk_cdma_single_user(#[case] matrix_size: usize) {
+        // Simulation parameters.
+        let num_bits = 4000; // How many bits to transmit overall.
+                             // Input parameters.
+        let samp_rate = 128_000; // Clock rate for both RX and TX.
+        let symbol_rate = 1000; // Rate symbols come out the things.
+        let carrier_freq = 2500_f64;
+
+        let mut rng = rand::thread_rng();
+        let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
+
+        let walsh_codes = HadamardMatrix::new(matrix_size);
+        let key: Vec<Bit> = walsh_codes.key(0).clone();
+
+        // Tx output.
+        let cdma_tx: Vec<f64> = tx_cdma_qpsk_signal(
+            data_bits.iter().cloned(),
+            samp_rate,
+            symbol_rate,
+            carrier_freq,
+            &key,
+        )
+        .collect();
+
+        let cdma_rx: Vec<Bit> = rx_cdma_qpsk_signal(
             cdma_tx.iter().cloned(),
             samp_rate,
             symbol_rate,
