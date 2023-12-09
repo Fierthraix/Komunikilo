@@ -1,7 +1,9 @@
+use crate::iter::Iter;
 use num::complex::Complex;
 use rand::rngs::ThreadRng;
 use rand_distr::{Distribution, Normal};
 
+mod bch;
 pub mod bpsk;
 pub mod cdma;
 mod costas;
@@ -14,8 +16,55 @@ pub mod iter;
 mod logistic_map;
 pub mod qpsk;
 mod turbo;
+mod util;
 
 pub type Bit = bool;
+
+fn bool_to_u8(bools: &[bool]) -> u8 {
+    let mut out: u8 = 0x0;
+    for i in 0..std::cmp::min(bools.len(), 8) {
+        if bools[i] {
+            out |= 1 << i
+        }
+    }
+    out
+}
+
+fn u8_to_bools(data: u8) -> [bool; 8] {
+    let mut out: [bool; 8] = [false; 8];
+    let mut data: u8 = data;
+    for i in 0..8 {
+        out[i] = (data & (1 << i)) != 0
+    }
+    out
+}
+
+fn bools_to_u8s<I>(bools: I) -> impl Iterator<Item = u8>
+where
+    I: Iterator<Item = Bit>,
+{
+    bools.chunks(8).map(|chunk| {
+        // Pad the last chunk, if neccessary.
+        if chunk.len() != 8 {
+            let mut last_chunk = Vec::with_capacity(8);
+            last_chunk.extend_from_slice(&chunk);
+
+            while !last_chunk.len() < 8 {
+                last_chunk.push(false);
+            }
+            bool_to_u8(&last_chunk)
+        } else {
+            bool_to_u8(&chunk)
+        }
+    })
+}
+
+fn u8s_to_bools<I>(bytes: I) -> impl Iterator<Item = bool>
+where
+    I: Iterator<Item = u8>,
+{
+    bytes.flat_map(u8_to_bools)
+}
 
 fn is_int(num: f64) -> bool {
     num == (num as u64) as f64
@@ -173,6 +222,7 @@ mod tests {
 
     use super::*;
     use assert_approx_eq::assert_approx_eq;
+    use rand::Rng;
     use std::f64::consts::PI;
 
     #[test]
@@ -183,6 +233,19 @@ mod tests {
         let _f0 = 1800;
         let ns = fs / baud;
         let _n = nbits * ns;
+    }
+
+    #[test]
+    fn bitstream_conversions() {
+        let mut rng = rand::thread_rng();
+        let num_bits = 33; // Ensure there will be padding.
+        let start_data: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
+
+        let u8s: Vec<u8> = bools_to_u8s(start_data.iter().cloned()).collect();
+        assert_eq!(u8s.len(), 40 / 8); // Check for padding as well...
+
+        let bits: Vec<Bit> = u8s_to_bools(u8s.iter().cloned()).collect();
+        assert_eq!(start_data, bits[..num_bits])
     }
 
     #[test]
