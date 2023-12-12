@@ -17,8 +17,7 @@ itertools = "0.10"
 rustfft = "6.1"
 assert_approx_eq = "1.1"
 easyfft = "0.4"
-reed-solomon-novelpoly = "1.0"
-reed-solomon-erasure = "4.0"
+reed-solomon= "0.2"
 
 [dev-dependencies]
 rayon = "1.7"
