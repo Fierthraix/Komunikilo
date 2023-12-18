@@ -1,4 +1,4 @@
-use crate::{bit_to_nrz, logistic_map::LogisticMap, Bit};
+use crate::{bit_to_nrz, chaos::LogisticMap, Bit};
 use itertools::Itertools;
 
 pub fn tx_baseband_dcsk<I: Iterator<Item = Bit>>(message: I) -> impl Iterator<Item = f64> {

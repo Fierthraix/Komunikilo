@@ -1,4 +1,4 @@
-use crate::{logistic_map::LogisticMap, Bit};
+use crate::{chaos::LogisticMap, Bit};
 
 fn tx_baseband_csk<I: Iterator<Item = Bit>>(message: I) -> impl Iterator<Item = f64>
 where
