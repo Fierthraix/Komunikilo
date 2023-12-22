@@ -4,6 +4,7 @@ use rand::rngs::ThreadRng;
 use rand_distr::{Distribution, Normal};
 
 mod bch;
+pub mod bpf;
 pub mod bpsk;
 pub mod cdma;
 pub mod chaos;
