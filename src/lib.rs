@@ -10,15 +10,19 @@ pub mod cdma;
 pub mod chaos;
 mod costas;
 pub mod csk;
+pub mod cyclostationary;
 pub mod dcsk;
-mod fh_ofdm_dcsk;
+pub mod fh;
+pub mod fh_ofdm_dcsk;
 mod filters;
 pub mod fm;
 pub mod hadamard;
 pub mod iter;
+pub mod ofdm;
 pub mod qpsk;
 mod turbo;
 mod util;
+mod willie;
 
 pub type Bit = bool;
 
@@ -34,17 +38,14 @@ fn bool_to_u8(bools: &[bool]) -> u8 {
 
 fn u8_to_bools(data: u8) -> [bool; 8] {
     let mut out: [bool; 8] = [false; 8];
-    let mut data: u8 = data;
+    let data: u8 = data;
     for i in 0..8 {
         out[i] = (data & (1 << i)) != 0
     }
     out
 }
 
-fn bools_to_u8s<I>(bools: I) -> impl Iterator<Item = u8>
-where
-    I: Iterator<Item = Bit>,
-{
+fn bools_to_u8s<I: Iterator<Item = Bit>>(bools: I) -> impl Iterator<Item = u8> {
     bools.chunks(8).map(|chunk| {
         // Pad the last chunk, if neccessary.
         if chunk.len() != 8 {
@@ -61,10 +62,7 @@ where
     })
 }
 
-fn u8s_to_bools<I>(bytes: I) -> impl Iterator<Item = bool>
-where
-    I: Iterator<Item = u8>,
-{
+fn u8s_to_bools<I: Iterator<Item = u8>>(bytes: I) -> impl Iterator<Item = bool> {
     bytes.flat_map(u8_to_bools)
 }
 
@@ -95,6 +93,14 @@ pub fn bit_to_nrz(bit: Bit) -> f64 {
     } else {
         -1_f64
     }
+}
+
+fn fftshift<T: Clone>(x: &[T]) -> Vec<T> {
+    let mut v = Vec::with_capacity(x.len());
+    let pivot = x.len().div_ceil(2);
+    v.extend_from_slice(&x[pivot..]);
+    v.extend_from_slice(&x[..pivot]);
+    v
 }
 
 #[inline]
@@ -162,10 +168,10 @@ where
 }
 */
 
-pub fn awgn_complex<I>(signal: I, sigma: f64) -> impl Iterator<Item = Complex<f64>>
-where
-    I: Iterator<Item = Complex<f64>>,
-{
+pub fn awgn_complex<I: Iterator<Item = Complex<f64>>>(
+    signal: I,
+    sigma: f64,
+) -> impl Iterator<Item = Complex<f64>> {
     signal
         .zip(
             Normal::new(0f64, sigma)
@@ -197,14 +203,18 @@ impl Awgn {
             dist: Normal::new(0_f64, sigma).unwrap(),
         }
     }
-    pub fn awgn<'a, I>(&'a mut self, signal: I) -> impl Iterator<Item = Complex<f64>> + '_
-    where
-        I: Iterator<Item = Complex<f64>> + 'a,
-    {
+    pub fn awgn<'a, I: Iterator<Item = Complex<f64>> + 'a>(
+        &'a mut self,
+        signal: I,
+    ) -> impl Iterator<Item = Complex<f64>> + '_ {
         signal
             .zip(self.dist.sample_iter(&mut self.rng))
             .map(|(sample, noise)| sample + noise)
     }
+}
+
+pub fn avg_energy(signal: &[f64]) -> f64 {
+    signal.iter().map(|&sample| sample.powi(2)).sum::<f64>() / signal.len() as f64
 }
 
 pub fn energy<I: Iterator<Item = f64>>(signal: I, sample_rate: f64) -> f64 {

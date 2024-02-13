@@ -1,16 +1,9 @@
-pub struct Integrate<T, I>
-where
-    I: Iterator<Item = T>,
-{
+pub struct Integrate<T, I: Iterator<Item = T>> {
     source: I,
     sum: T,
 }
 
-impl<T, I> Integrate<T, I>
-where
-    I: Iterator<Item = T>,
-    T: std::default::Default,
-{
+impl<T: std::default::Default, I: Iterator<Item = T>> Integrate<T, I> {
     pub fn new(source: I) -> Integrate<T, I> {
         Self {
             source,
@@ -19,9 +12,8 @@ where
     }
 }
 
-impl<T, I> Iterator for Integrate<T, I>
+impl<T, I: Iterator<Item = T>> Iterator for Integrate<T, I>
 where
-    I: Iterator<Item = T>,
     T: std::default::Default + std::ops::AddAssign + Copy,
 {
     type Item = T;

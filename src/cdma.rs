@@ -6,10 +6,10 @@ use crate::{bit_to_nrz, is_int, iter::Iter, Bit};
 /// Transmits a DS-CDMA signal.
 /// Each bit of a data signal is multiplied by a key.
 /// The output rate of this function is the bitrate times the keysize.
-pub fn tx_baseband_cdma<'a, I>(message: I, key: &'a [Bit]) -> impl Iterator<Item = Bit> + 'a
-where
-    I: Iterator<Item = Bit> + 'a,
-{
+pub fn tx_baseband_cdma<'a, I: Iterator<Item = Bit> + 'a>(
+    message: I,
+    key: &'a [Bit],
+) -> impl Iterator<Item = Bit> + 'a {
     message
         .inflate(key.len()) // Make each bit as long as the key.
         .zip(key.iter().cycle())
@@ -17,10 +17,10 @@ where
 }
 
 /// Transmits a DS-CDMA signal.
-pub fn rx_baseband_cdma<'a, I>(bitstream: I, key: &'a [Bit]) -> impl Iterator<Item = Bit> + '_
-where
-    I: Iterator<Item = Bit> + 'a,
-{
+pub fn rx_baseband_cdma<'a, I: Iterator<Item = Bit> + 'a>(
+    bitstream: I,
+    key: &'a [Bit],
+) -> impl Iterator<Item = Bit> + '_ {
     // Multiply by key, and take the average.
     bitstream
         .zip(key.iter().cycle())
@@ -40,16 +40,13 @@ where
 /// Transmits a DS-CDMA/BPSK.
 /// Each symbol of a BPSK data signal is multiplied by a key.
 /// The chip rate will be `symbol_rate * key.len()`.
-pub fn tx_cdma_bpsk_signal<'a, I>(
+pub fn tx_cdma_bpsk_signal<'a, I: Iterator<Item = Bit> + 'a>(
     message: I,
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
     key: &'a [Bit],
-) -> impl Iterator<Item = f64> + '_
-where
-    I: Iterator<Item = Bit> + 'a,
-{
+) -> impl Iterator<Item = f64> + '_ {
     assert!(sample_rate / 2 >= key.len() * symbol_rate);
     assert!(sample_rate / 2 >= carrier_freq as usize);
     assert!(is_int(sample_rate as f64 / symbol_rate as f64));
@@ -67,16 +64,13 @@ where
 /// Transmits a DS-CDMA/BPSK.
 /// Each symbol of the signal is multiplied by a key, then
 /// received as a regular BPSK signal.
-pub fn rx_cdma_bpsk_signal<'a, I>(
+pub fn rx_cdma_bpsk_signal<'a, I: Iterator<Item = f64> + 'a>(
     signal: I,
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
     key: &'a [Bit],
-) -> impl Iterator<Item = Bit> + '_
-where
-    I: Iterator<Item = f64> + 'a,
-{
+) -> impl Iterator<Item = Bit> + '_ {
     assert!(sample_rate / 2 >= key.len() * symbol_rate);
     assert!(sample_rate / 2 >= carrier_freq as usize);
     assert!(is_int(sample_rate as f64 / symbol_rate as f64));
@@ -95,16 +89,13 @@ where
 /// Transmits a DS-CDMA/BPSK.
 /// Each symbol of a BPSK data signal is multiplied by a key.
 /// The chip rate will be `symbol_rate * key.len()`.
-pub fn tx_coded_cdma_bpsk_signal<'a, I>(
+pub fn tx_coded_cdma_bpsk_signal<'a, I: Iterator<Item = Bit> + 'a>(
     message: I,
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
     key: &'a [Bit],
-) -> impl Iterator<Item = f64> + '_
-where
-    I: Iterator<Item = Bit> + 'a,
-{
+) -> impl Iterator<Item = f64> + '_ {
     tx_cdma_bpsk_signal(
         bch_stream_encode(message),
         sample_rate,
@@ -117,16 +108,13 @@ where
 /// Transmits a DS-CDMA/BPSK.
 /// Each symbol of the signal is multiplied by a key, then
 /// received as a regular BPSK signal.
-pub fn rx_coded_cdma_bpsk_signal<'a, I>(
+pub fn rx_coded_cdma_bpsk_signal<'a, I: Iterator<Item = f64> + 'a>(
     signal: I,
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
     key: &'a [Bit],
-) -> impl Iterator<Item = Bit> + '_
-where
-    I: Iterator<Item = f64> + 'a,
-{
+) -> impl Iterator<Item = Bit> + '_ {
     bch_stream_decode(rx_cdma_bpsk_signal(
         signal,
         sample_rate,
@@ -139,16 +127,13 @@ where
 /// Transmits a DS-CDMA/QPSK.
 /// Each symbol of a QPSK data signal is multiplied by a key.
 /// The chip rate will be `symbol_rate / 2 * key.len()`.
-pub fn tx_cdma_qpsk_signal<'a, I>(
+pub fn tx_cdma_qpsk_signal<'a, I: Iterator<Item = Bit> + 'a>(
     message: I,
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
     key: &'a [Bit],
-) -> impl Iterator<Item = f64> + '_
-where
-    I: Iterator<Item = Bit> + 'a,
-{
+) -> impl Iterator<Item = f64> + '_ {
     assert!(sample_rate / 2 >= key.len() * symbol_rate);
     assert!(sample_rate / 2 >= carrier_freq as usize);
     assert!(is_int(sample_rate as f64 / symbol_rate as f64));
@@ -166,16 +151,13 @@ where
 /// Transmits a DS-CDMA/QPSK.
 /// Each symbol of the signal is multiplied by a key, then
 /// received as a regular QPSK signal.
-pub fn rx_cdma_qpsk_signal<'a, I>(
+pub fn rx_cdma_qpsk_signal<'a, I: Iterator<Item = f64> + 'a>(
     signal: I,
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
     key: &'a [Bit],
-) -> impl Iterator<Item = Bit> + '_
-where
-    I: Iterator<Item = f64> + 'a,
-{
+) -> impl Iterator<Item = Bit> + '_ {
     assert!(sample_rate / 2 >= key.len() * symbol_rate);
     assert!(sample_rate / 2 >= carrier_freq as usize);
     assert!(is_int(sample_rate as f64 / symbol_rate as f64));

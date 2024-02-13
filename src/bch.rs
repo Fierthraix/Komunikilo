@@ -7,10 +7,7 @@ const ECC_VALUE: usize = 5;
 const FRAME_VALUE: usize = DAT_VALUE + ECC_VALUE;
 
 /// Should do a (7, 4, 1) BCH Coding.
-pub fn bch_stream_encode<I>(data: I) -> impl Iterator<Item = Bit>
-where
-    I: Iterator<Item = Bit>,
-{
+pub fn bch_stream_encode<I: Iterator<Item = Bit>>(data: I) -> impl Iterator<Item = Bit> {
     bools_to_u8s(data)
         .chunks(DAT_VALUE)
         .flat_map(|chunk| {
@@ -21,10 +18,7 @@ where
         .flat_map(|byte| u8_to_bools(byte))
 }
 
-pub fn bch_stream_decode<I>(data: I) -> impl Iterator<Item = Bit>
-where
-    I: Iterator<Item = Bit>,
-{
+pub fn bch_stream_decode<I: Iterator<Item = Bit>>(data: I) -> impl Iterator<Item = Bit> {
     bools_to_u8s(data)
         .chunks(FRAME_VALUE)
         .flat_map(|chunk| {

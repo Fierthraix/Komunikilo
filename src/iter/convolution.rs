@@ -6,9 +6,8 @@ pub trait ConvolveIt: Iterator {}
 
 impl<I: Iterator> ConvolveIt for I {}
 
-pub struct Convolver<T, I>
+pub struct Convolver<T, I: Iterator<Item = T>>
 where
-    I: Iterator<Item = T>,
     T: Mul<T, Output = T> + Sum<T> + Copy,
 {
     source: I,

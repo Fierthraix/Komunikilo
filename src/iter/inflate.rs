@@ -1,20 +1,12 @@
 #[derive(Clone)]
-pub struct Inflate<T, I>
-where
-    I: Iterator<Item = T>,
-    T: Copy,
-{
+pub struct Inflate<T: Copy, I: Iterator<Item = T>> {
     source: I,
     copies: usize,
     curr_copy: usize,
     curr: Option<T>,
 }
 
-impl<T, I> Inflate<T, I>
-where
-    I: Iterator<Item = T>,
-    T: Copy,
-{
+impl<T: Copy, I: Iterator<Item = T>> Inflate<T, I> {
     pub fn new(source: I, copies: usize) -> Inflate<T, I> {
         Self {
             source,
@@ -25,11 +17,7 @@ where
     }
 }
 
-impl<T, I> Iterator for Inflate<T, I>
-where
-    I: Iterator<Item = T>,
-    T: Copy,
-{
+impl<T: Copy, I: Iterator<Item = T>> Iterator for Inflate<T, I> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {

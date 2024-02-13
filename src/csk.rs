@@ -1,9 +1,6 @@
 use crate::{chaos::LogisticMap, Bit};
 
-fn tx_baseband_csk<I: Iterator<Item = Bit>>(message: I) -> impl Iterator<Item = f64>
-where
-    I: Iterator<Item = Bit>,
-{
+fn tx_baseband_csk<I: Iterator<Item = Bit>>(message: I) -> impl Iterator<Item = f64> {
     let mu = 3.9;
     let x0_1 = 0.1;
     let x0_2 = 0.15;
@@ -13,10 +10,7 @@ where
         .map(|((bit, chaos_1), chaos_2)| if bit { chaos_1 } else { chaos_2 })
 }
 
-fn rx_baseband_csk<I: Iterator<Item = f64>>(message: I) -> impl Iterator<Item = Bit>
-where
-    I: Iterator<Item = f64>,
-{
+fn rx_baseband_csk<I: Iterator<Item = f64>>(message: I) -> impl Iterator<Item = Bit> {
     let mu = 3.9;
     let x0_1 = 0.1;
     let x0_2 = 0.15;

@@ -6,7 +6,7 @@ mod convolution;
 mod inflate;
 mod integrate;
 mod take_every;
-use crate::iter::chunks::Chunks;
+use crate::iter::chunks::{Chunks, WholeChunks};
 use crate::iter::convolution::{Convolver, Nonvolver};
 use crate::iter::inflate::Inflate;
 use crate::iter::integrate::{Integrate, Nintegrate};
@@ -23,6 +23,18 @@ pub trait Iter: Iterator {
         T: Copy,
     {
         Chunks::new(self, num_chunks)
+    }
+
+    ///
+    /// ```rust
+    /// # use komunikilo::iter::Iter;
+    /// ```
+    fn wchunks<T>(self, num_chunks: usize) -> WholeChunks<T, Self>
+    where
+        Self: Iterator<Item = T> + Sized,
+        T: Copy + Default,
+    {
+        WholeChunks::new(self, num_chunks)
     }
 
     ///

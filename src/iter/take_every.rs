@@ -1,16 +1,10 @@
-pub struct Take<T, I>
-where
-    I: Iterator<Item = T>,
-{
+pub struct Take<T, I: Iterator<Item = T>> {
     source: I,
     frequency: usize,
     curr: usize,
 }
 
-impl<T, I> Take<T, I>
-where
-    I: Iterator<Item = T>,
-{
+impl<T, I: Iterator<Item = T>> Take<T, I> {
     pub fn new(source: I, frequency: usize) -> Take<T, I> {
         Self {
             source,
@@ -20,10 +14,7 @@ where
     }
 }
 
-impl<T, I> Iterator for Take<T, I>
-where
-    I: Iterator<Item = T>,
-{
+impl<T, I: Iterator<Item = T>> Iterator for Take<T, I> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
