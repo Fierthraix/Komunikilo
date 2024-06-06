@@ -36,7 +36,7 @@ mod tests {
 
     #[test]
     fn normtest_awgn() {
-        let num_samples = 10_000;
+        let num_samples = 100_000;
         let awgn_signal: Vec<f64> = Normal::new(0f64, 5f64)
             .unwrap()
             .sample_iter(rand::thread_rng())
@@ -55,5 +55,21 @@ mod tests {
             .collect();
         let sine_test: f64 = normaltest(&sine_wave);
         assert_approx_eq!(sine_test, 0f64);
+    }
+
+    #[test]
+    fn energy_detector_test_awgn() {
+        let num_samples = 100_000;
+        let n0 = 6f64;
+        let awgn_signal: Vec<f64> = Normal::new(0f64, n0)
+            .unwrap()
+            .sample_iter(rand::thread_rng())
+            .take(num_samples)
+            .collect();
+
+        let energy: f64 = (awgn_signal.iter().map(|&s_i| s_i.powi(2)).sum::<f64>()
+            / awgn_signal.len() as f64)
+            .sqrt();
+        assert_approx_eq!(energy, n0, 1f64);
     }
 }

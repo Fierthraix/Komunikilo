@@ -23,6 +23,8 @@ reed-solomon= "0.2"
 rustfft = "6.1"
 sci-rs = "0.3"
 hilbert_transform = "0.1"
+ndarray = "0.15"
+ndrustfft = "0.4"
 
 [dev-dependencies]
 csv = "1.3"

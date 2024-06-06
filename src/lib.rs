@@ -2,6 +2,7 @@ use crate::iter::Iter;
 use num::complex::Complex;
 use rand::rngs::ThreadRng;
 use rand_distr::{Distribution, Normal};
+use std::f64::consts::PI;
 
 mod bch;
 pub mod bpf;
@@ -16,6 +17,7 @@ pub mod fh;
 pub mod fh_ofdm_dcsk;
 mod filters;
 pub mod fm;
+pub mod fsk;
 pub mod hadamard;
 pub mod iter;
 pub mod ofdm;
@@ -130,6 +132,12 @@ pub fn erfc(x: f64) -> f64 {
     1f64 - erf(x)
 }
 
+pub fn hamming_window(length: usize) -> Vec<f64> {
+    (0..length)
+        .map(|i| 0.54 - 0.46 * (2f64 * PI * i as f64 / length as f64).cos())
+        .collect()
+}
+
 macro_rules! ber {
     ($tx:expr, $rx:expr) => {
         let len = std::cmp::min(tx, rx);
@@ -213,6 +221,8 @@ impl Awgn {
     }
 }
 
+#[inline]
+/// Calculates the energy per sample.
 pub fn avg_energy(signal: &[f64]) -> f64 {
     signal.iter().map(|&sample| sample.powi(2)).sum::<f64>() / signal.len() as f64
 }

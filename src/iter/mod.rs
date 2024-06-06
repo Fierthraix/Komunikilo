@@ -5,11 +5,13 @@ mod chunks;
 mod convolution;
 mod inflate;
 mod integrate;
+mod scale;
 mod take_every;
 use crate::iter::chunks::{Chunks, WholeChunks};
 use crate::iter::convolution::{Convolver, Nonvolver};
 use crate::iter::inflate::Inflate;
-use crate::iter::integrate::{Integrate, Nintegrate};
+use crate::iter::integrate::{Integrate, IntegrateDump, Nintegrate, NintegrateDump};
+use crate::iter::scale::Scale;
 use crate::iter::take_every::Take;
 
 pub trait Iter: Iterator {
@@ -113,6 +115,29 @@ pub trait Iter: Iterator {
         T: std::default::Default + Copy,
     {
         Nintegrate::new(self)
+    }
+
+    fn integrate_and_dump<T>(self, dump_every: usize) -> IntegrateDump<T, Self>
+    where
+        Self: Iterator<Item = T> + Sized,
+        T: std::default::Default,
+    {
+        IntegrateDump::new(self, dump_every)
+    }
+
+    fn nintegrate_and_dump<T, const N: usize>(self, dump_every: usize) -> NintegrateDump<T, Self, N>
+    where
+        Self: Iterator<Item = [T; N]> + Sized,
+        T: std::default::Default + Copy,
+    {
+        NintegrateDump::new(self, dump_every)
+    }
+
+    fn scale<T: std::ops::Mul<f64, Output = T>>(self, scalar: f64) -> Scale<T, Self>
+    where
+        Self: Iterator<Item = T> + Sized,
+    {
+        Scale::new(self, scalar)
     }
 
     /// Equivalent to:

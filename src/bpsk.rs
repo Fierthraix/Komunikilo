@@ -1,4 +1,4 @@
-use crate::{bit_to_nrz, iter::Iter, Bit};
+use crate::{bit_to_nrz, is_int, iter::Iter, Bit};
 use num::complex::Complex;
 use std::f64::consts::PI;
 
@@ -28,6 +28,8 @@ pub fn tx_bpsk_signal<I: Iterator<Item = Bit>>(
 ) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
+    assert!(sample_rate / 2 >= carrier_freq as usize);
+    assert!(is_int(sample_rate as f64 / symbol_rate as f64));
 
     message
         .map(bit_to_nrz)

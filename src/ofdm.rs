@@ -1,22 +1,14 @@
+use crate::cdma::rx_baseband_cdma;
 use crate::iter::Iter;
 use crate::qpsk::{rx_baseband_qpsk_signal, tx_baseband_qpsk_signal};
-use crate::{is_int, Bit};
+use crate::{fftshift, is_int, Bit};
 use rustfft::num_traits::Zero;
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
-fn fftshift<T: Clone>(x: &[T]) -> Vec<T> {
-    let mut v = Vec::with_capacity(x.len());
-    let pivot = x.len().div_ceil(2);
-    v.extend_from_slice(&x[pivot..]);
-    v.extend_from_slice(&x[..pivot]);
-    v
-}
-
-pub fn tx_baseband_ofdm_signal<I>(symbols: I) -> impl Iterator<Item = Complex<f64>>
-where
-    I: Iterator<Item = Complex<f64>>,
-{
+pub fn tx_baseband_ofdm_signal<I: Iterator<Item = Complex<f64>>>(
+    symbols: I,
+) -> impl Iterator<Item = Complex<f64>> {
     let n_subcarriers = 64;
     let n_data_subcarriers = 52;
     let cp_len = n_subcarriers / 4;
@@ -58,10 +50,9 @@ where
     ofdm_symbols
 }
 
-pub fn rx_baseband_ofdm_signal<I>(message: I) -> impl Iterator<Item = Complex<f64>>
-where
-    I: Iterator<Item = Complex<f64>>,
-{
+pub fn rx_baseband_ofdm_signal<I: Iterator<Item = Complex<f64>>>(
+    message: I,
+) -> impl Iterator<Item = Complex<f64>> {
     let n_subcarriers = 64;
     let n_data_subcarriers = 52;
     let cp_len = n_subcarriers / 4;
@@ -94,15 +85,12 @@ where
         })
 }
 
-pub fn tx_ofdm_qpsk_signal<I>(
+pub fn tx_ofdm_qpsk_signal<I: Iterator<Item = Bit>>(
     message: I,
     sample_rate: usize,
     symbol_rate: usize,
     carrier_freq: f64,
-) -> impl Iterator<Item = f64>
-where
-    I: Iterator<Item = Bit>,
-{
+) -> impl Iterator<Item = f64> {
     assert!(is_int(sample_rate as f64 / symbol_rate as f64));
     let samples_per_symbol = sample_rate / symbol_rate;
 
@@ -116,6 +104,34 @@ where
             // ofdm_symbol.re * (w0 * time).cos() - ofdm_symbol.im * (w0 * time).sin()
             (ofdm_symbol * Complex::new(0f64, 2f64 * PI * carrier_freq * time).exp()).re
         })
+}
+
+pub fn rx_ofdm_qpsk_signal<I: Iterator<Item = f64>>(
+    message: I,
+    sample_rate: usize,
+    symbol_rate: usize,
+    carrier_freq: f64,
+) -> impl Iterator<Item = Bit> {
+    assert!(is_int(sample_rate as f64 / symbol_rate as f64));
+    let samples_per_symbol = sample_rate / symbol_rate;
+
+    let filter: Vec<f64> = (0..samples_per_symbol).map(|_| 1f64).collect();
+    let ofdm_symbols = message
+        .enumerate()
+        .map(move |(idx, sample)| {
+            let time = idx as f64 / sample_rate as f64;
+            let ii = sample * (2_f64 * PI * carrier_freq * time).cos();
+            let qi = sample * -(2_f64 * PI * carrier_freq * time).sin();
+
+            [ii, qi]
+        })
+        .nonvolve(filter)
+        .map(|s_i| Complex::new(s_i[0], s_i[1]))
+        .take_every(samples_per_symbol)
+        .skip(1);
+
+    let qpsk_symbols = rx_baseband_ofdm_signal(ofdm_symbols);
+    rx_baseband_qpsk_signal(qpsk_symbols)
 }
 
 #[cfg(test)]
@@ -134,8 +150,34 @@ mod tests {
         let tx_sig: Vec<Complex<f64>> =
             tx_baseband_ofdm_signal(tx_baseband_qpsk_signal(data_bits.iter().cloned())).collect();
 
-        let rx_bits =
-            rx_baseband_qpsk_signal(rx_baseband_ofdm_signal(tx_sig.iter().cloned())).collect_vec();
+        let rx_bits: Vec<Bit> =
+            rx_baseband_qpsk_signal(rx_baseband_ofdm_signal(tx_sig.iter().cloned())).collect();
+
+        assert_eq!(data_bits.len(), rx_bits.len());
+        assert_eq!(data_bits, rx_bits);
+    }
+
+    #[test]
+    fn test_qpsk_ofdm() {
+        let num_bits = 2080;
+        let samp_rate = 44100; // Clock rate for both RX and TX.
+        let symbol_rate = 900; // Rate symbols come out the things.
+        let carrier_freq = 1800_f64;
+
+        let mut rng = rand::thread_rng();
+        let data_bits: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
+
+        let tx_sig: Vec<f64> = tx_ofdm_qpsk_signal(
+            data_bits.iter().cloned(),
+            samp_rate,
+            symbol_rate,
+            carrier_freq,
+        )
+        .collect();
+
+        let rx_bits: Vec<Bit> =
+            rx_ofdm_qpsk_signal(tx_sig.iter().cloned(), samp_rate, symbol_rate, carrier_freq)
+                .collect();
 
         assert_eq!(data_bits.len(), rx_bits.len());
         assert_eq!(data_bits, rx_bits);

@@ -1,26 +1,28 @@
 use crate::iter::Iter;
 use crate::*;
-use assert_approx_eq::assert_approx_eq;
 use num::Zero;
 use realfft::RealFftPlanner;
-use std::f64::consts::PI;
+use sci_rs::signal::filter::{design::*, sosfiltfilt_dyn};
 
 const FFT_LEN: usize = 8192;
 
-pub fn bandpass<I>(low: f64, high: f64, stream: I, sample_rate: usize) -> impl Iterator<Item = f64>
-where
-    I: Iterator<Item = f64>,
-{
+pub fn bandpass<I: Iterator<Item = f64>>(
+    low: f64,
+    high: f64,
+    stream: I,
+    sample_rate: usize,
+    fft_len: usize,
+) -> impl Iterator<Item = f64> {
     let mut planner: RealFftPlanner<f64> = RealFftPlanner::new();
-    let fft = planner.plan_fft_forward(FFT_LEN);
-    let ifft = planner.plan_fft_inverse(FFT_LEN);
+    let fft = planner.plan_fft_forward(fft_len);
+    let ifft = planner.plan_fft_inverse(fft_len);
 
-    let frequencies: Vec<f64> = (0..FFT_LEN)
-        .map(|i| (i * sample_rate) as f64 / (FFT_LEN as f64))
+    let frequencies: Vec<f64> = (0..fft_len)
+        .map(|i| (i * sample_rate) as f64 / (fft_len as f64))
         .collect();
 
-    stream.chunks(FFT_LEN).flat_map(move |chunk| {
-        assert_eq!(chunk.len(), FFT_LEN);
+    stream.chunks(fft_len).flat_map(move |chunk| {
+        assert_eq!(chunk.len(), fft_len);
         let mut spectrum = fft.make_output_vec();
         let mut chunk = chunk.clone();
         // Convert with FFT.
@@ -39,13 +41,35 @@ where
         ifft.process(&mut spectrum, &mut real_sig).unwrap();
 
         // Normalize FFT.
-        real_sig.into_iter().map(|s_i| s_i / (FFT_LEN as f64))
+        real_sig.into_iter().map(move |s_i| s_i / (fft_len as f64))
     })
+}
+
+pub fn butterpass<I: Iterator<Item = f64>>(
+    low: f64,
+    high: f64,
+    stream: I,
+    sample_rate: usize,
+) -> impl Iterator<Item = f64> {
+    let DigitalFilter::Sos(bandpass_filter) = butter_dyn(
+        64,
+        [low, high].to_vec(),
+        Some(FilterBandType::Bandpass),
+        Some(false),
+        Some(FilterOutputType::Sos),
+        Some(sample_rate as f64),
+    ) else {
+        panic!("Failed to design filter");
+    };
+    stream
+        .chunks(FFT_LEN * 10)
+        .flat_map(move |chunk| sosfiltfilt_dyn(chunk.into_iter(), &bandpass_filter.sos))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     #[test]
     fn it_works() {
@@ -72,10 +96,17 @@ mod tests {
             .collect();
 
         let eps = 20f64;
-        let filtered_signal: Vec<f64> =
-            bandpass(f1 - eps, f1 + eps, signal.iter().cloned(), sample_rate).collect();
+        let filtered_signal: Vec<f64> = bandpass(
+            f1 - eps,
+            f1 + eps,
+            signal.iter().cloned(),
+            sample_rate,
+            FFT_LEN,
+        )
+        .collect();
 
         // assert_approx_eq!(filtered_signal, s1);
+        assert_eq!(signal.len(), filtered_signal.len());
         filtered_signal
             .iter()
             .zip(s1.iter())

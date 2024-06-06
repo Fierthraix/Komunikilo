@@ -1,8 +1,10 @@
 #[inline]
 /// Can be either 1-2(x_n^2) or 2(x_n^2)-1.
 pub fn chebyshev(xn: f64) -> f64 {
+    let mu = 3f64;
     // 1f64 - 2f64 * xn.powi(2)
-    2f64 * xn.powi(2) - 1f64
+    // 2f64 * xn.powi(2) - 1f64
+    mu * xn.powi(3) - (1f64 - mu) * xn
 }
 
 pub struct Chebyshev {
