@@ -4,14 +4,14 @@ use pyo3::types::IntoPyDict;
 
 fn normaltest(signal: &[f64]) -> f64 {
     Python::with_gil(|py| {
-        let scipy_stats = PyModule::import(py, "scipy.stats")?;
+        let scipy_stats = py.import_bound("scipy.stats")?;
         let normtest: f64 = scipy_stats
             .getattr("normaltest")?
             .call1((Vec::from(signal),))?
             .getattr("pvalue")?
             .extract()?;
 
-        return Ok::<f64, PyErr>(normtest);
+        Ok::<f64, PyErr>(normtest)
     })
     .unwrap()
 }

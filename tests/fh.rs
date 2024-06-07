@@ -35,15 +35,16 @@ fn fh_works() {
     plot!(time, fh_signal, "/tmp/fh_bpsk_signal.png");
 
     Python::with_gil(|py| {
-        let plt = py.import("matplotlib.pyplot")?;
-        let np = py.import("numpy")?;
-        let locals = [("np", np), ("plt", plt)].into_py_dict(py);
+        let plt = py.import_bound("matplotlib.pyplot")?;
+        let np = py.import_bound("numpy")?;
+        let locals = [("np", np), ("plt", plt)].into_py_dict_bound(py);
 
         locals.set_item("fh_signal", fh_signal)?;
         locals.set_item("time", time)?;
 
-        let (fig, axes): (&PyAny, &PyAny) =
-            py.eval("plt.subplots(1)", None, Some(&locals))?.extract()?;
+        let (fig, axes): (&PyAny, &PyAny) = py
+            .eval_bound("plt.subplots(1)", None, Some(&locals))?
+            .extract()?;
         locals.set_item("fig", fig)?;
         locals.set_item("axes", axes)?;
 
@@ -53,7 +54,7 @@ fn fh_works() {
             "axes[1].plot(x(bpsk_tx, dt), bpsk_tx, label='BPSK: (2.5kHz, 1kHz Data Rate)')",
             "axes[2].plot(x(cdma_tx, dt), cdma_tx, label='CDMA: 8kHz Chip Rate')",
         ] {
-            py.eval(line, None, Some(&locals))?;
+            py.eval_bound(line, None, Some(&locals))?;
         }
         */
 
@@ -70,7 +71,7 @@ fn fh_works() {
             // "plt.show()",
             "fig.savefig('/tmp/fh_works.png', dpi=300)",
         ] {
-            py.eval(line, None, Some(&locals))?;
+            py.eval_bound(line, None, Some(&locals))?;
         }
 
         PyResult::Ok(())

@@ -50,7 +50,7 @@ pub fn rx_qpsk_signal<I: Iterator<Item = f64>>(
 ) -> impl Iterator<Item = Bit> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
-    let filter: Vec<f64> = (0..samples_per_symbol).map(|_| 1f64).collect();
+    // let filter: Vec<f64> = /*vec![1f64; samples_per_symbol];*/ (0..samples_per_symbol).map(|_| 1f64).collect();
 
     // Split into two branches for I and Q, and output two bits at once.
     message
@@ -62,10 +62,13 @@ pub fn rx_qpsk_signal<I: Iterator<Item = f64>>(
 
             [ii, qi]
         })
+        .nintegrate_and_dump(samples_per_symbol)
+        /*
         .nonvolve(filter)
         .take_every(samples_per_symbol)
+        .skip(4)
+            */
         .flat_map(|[val1, val2]| [val1 >= 0f64, val2 >= 0f64].into_iter())
-        .skip(2)
 }
 
 #[cfg(test)]

@@ -75,20 +75,21 @@ fn python_plotz() -> PyResult<()> {
     let t_step: f64 = 1f64 / (samp_rate as f64);
 
     Python::with_gil(|py| {
-        let plt = py.import("matplotlib.pyplot")?;
-        let np = py.import("numpy")?;
-        let locals = [("np", np), ("plt", plt)].into_py_dict(py);
+        let plt = py.import_bound("matplotlib.pyplot")?;
+        let np = py.import_bound("numpy")?;
+        let locals = [("np", np), ("plt", plt)].into_py_dict_bound(py);
 
         locals.set_item("data_tx", data_tx)?;
         locals.set_item("cdma_tx", cdma_tx)?;
         locals.set_item("fh_ofdm_dcsk_tx", fh_ofdm_dcsk_tx)?;
         locals.set_item("dt", t_step)?;
 
-        let x = py.eval("lambda s, dt: [dt * i for i in range(len(s))]", None, None)?;
+        let x = py.eval_bound("lambda s, dt: [dt * i for i in range(len(s))]", None, None)?;
         locals.set_item("x", x)?;
 
-        let (fig, axes): (&PyAny, &PyAny) =
-            py.eval("plt.subplots(4)", None, Some(&locals))?.extract()?;
+        let (fig, axes): (&PyAny, &PyAny) = py
+            .eval_bound("plt.subplots(4)", None, Some(&locals))?
+            .extract()?;
         locals.set_item("fig", fig)?;
         locals.set_item("axes", axes)?;
 
@@ -97,7 +98,7 @@ fn python_plotz() -> PyResult<()> {
             "axes[1].plot(x(cdma_tx, dt), cdma_tx, label='CDMA: (2.5kHz, 1kHz Data Rate)')",
             "axes[2].plot(x(fh_ofdm_dcsk_tx, dt), fh_ofdm_dcsk_tx, label='fh_ofdm_dcsk: 8kHz Chip Rate')",
         ] {
-            py.eval(line, None, Some(&locals))?;
+            py.eval_bound(line, None, Some(&locals))?;
         }
 
         locals.set_item("samp_rate", samp_rate)?;
@@ -111,7 +112,7 @@ fn python_plotz() -> PyResult<()> {
             // "plt.show()",
             "fig.savefig('/tmp/fh_ofdm_dcsk_works.png', dpi=300)",
         ] {
-            py.eval(line, None, Some(&locals))?;
+            py.eval_bound(line, None, Some(&locals))?;
         }
 
         Ok(())

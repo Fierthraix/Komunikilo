@@ -1,5 +1,8 @@
 /target
-/Cargo.lock
+/*.lock
 *.ignore
 *.py
 *.txt
+*.so
+**/__pycache__/*
+**/profiles/*

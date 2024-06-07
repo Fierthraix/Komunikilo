@@ -54,19 +54,21 @@ impl<T: Copy + Default, I: Iterator<Item = T>> Iterator for WholeChunks<T, I> {
 
     fn next(&mut self) -> Option<Vec<T>> {
         let mut buf = Vec::with_capacity(self.num_chunks);
-        // Get up to num_chunks items
-        for _ in 0..self.num_chunks {
-            match self.source.next() {
-                Some(t) => {
-                    buf.push(t);
-                }
-                None => {
-                    self.done = true;
-                    T::default();
+        if !self.done {
+            // Get up to num_chunks items
+            for _ in 0..self.num_chunks {
+                match self.source.next() {
+                    Some(t) => {
+                        buf.push(t);
+                    }
+                    None => {
+                        self.done = true;
+                        buf.push(T::default());
+                    }
                 }
             }
         }
-        if buf.is_empty() && self.done {
+        if buf.is_empty() {
             None
         } else {
             Some(buf)

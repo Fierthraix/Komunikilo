@@ -68,10 +68,10 @@ fn py_version() -> PyResult<()> {
         rx_baseband_qpsk_signal(rx_baseband_ofdm_signal(tx_sig.iter().cloned())).collect();
 
     Python::with_gil(|py| {
-        let pathlib = py.import("pathlib")?;
-        let importlib = py.import("importlib")?;
-        let plt = py.import("matplotlib.pyplot")?;
-        let np = py.import("numpy")?;
+        let pathlib = py.import_bound("pathlib")?;
+        let importlib = py.import_bound("importlib")?;
+        let plt = py.import_bound("matplotlib.pyplot")?;
+        let np = py.import_bound("numpy")?;
 
         let locals = [
             ("importlib", importlib),
@@ -79,18 +79,18 @@ fn py_version() -> PyResult<()> {
             ("np", np),
             ("plt", plt),
         ]
-        .into_py_dict(py);
+        .into_py_dict_bound(py);
 
         locals.set_item("tx_sig_rs", tx_sig.clone())?;
 
-        let mod_path = py.eval(
+        let mod_path = py.eval_bound(
             "pathlib.Path.home() / 'projects' / 'comms_py' / 'ofdm_trx5.py'",
             None,
             Some(&locals),
         )?;
         locals.set_item("mod_path", mod_path)?;
 
-        let comms_py = py.eval(
+        let comms_py = py.eval_bound(
             "importlib.machinery.SourceFileLoader(mod_path.name, str(mod_path)).load_module()",
             None,
             Some(&locals),
@@ -99,20 +99,20 @@ fn py_version() -> PyResult<()> {
 
         locals.set_item("data", data.clone())?;
         let py_tx_sig_re: Vec<f64> = py
-            .eval(
+            .eval_bound(
                 "list(np.array(comms_py.tx_ofdm(data)).real)",
                 None,
                 Some(&locals),
             )?
             .extract()?;
-        let py_tx_sig_im: Vec<f64> /*&pyo3::PyAny*/ = py.eval(
+        let py_tx_sig_im: Vec<f64> /*&pyo3::PyAny*/ = py.eval_bound(
             "list(np.array(comms_py.tx_ofdm(data)).imag)",
             None,
             Some(&locals),
         )?.extract()?;
 
         let py_rx_dat: Vec<bool> = py
-            .eval(
+            .eval_bound(
                 "list(map(bool, comms_py.rx_ofdm(comms_py.tx_ofdm(data))))",
                 None,
                 Some(&locals),
@@ -120,7 +120,7 @@ fn py_version() -> PyResult<()> {
             .extract()?;
 
         let py_rx_dat_rs_py: Vec<bool> = py
-            .eval(
+            .eval_bound(
                 "list(map(bool, comms_py.rx_ofdm(tx_sig_rs)))",
                 None,
                 Some(&locals),
@@ -150,7 +150,7 @@ fn py_version() -> PyResult<()> {
         assert_eq!(tx_sig.len(), py_tx_sig.len());
         assert_eq!(rx_dat.len(), py_rx_dat.len());
 
-        assert_eq!(Complex::new(1f64, 1f64).abs(), 1.4142135623730951);
+        assert_eq!(Complex::new(1f64, 1f64).abs(), std::f64::consts::SQRT_2);
 
         let tx_err: usize = tx_sig
             .iter()

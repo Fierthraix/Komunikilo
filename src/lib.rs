@@ -1,6 +1,9 @@
-use crate::iter::Iter;
-use num::complex::Complex;
+use num_complex::Complex;
+use numpy::ndarray::Array2;
+use numpy::{IntoPyArray, PyArray1, PyArray2};
+use pyo3::prelude::*;
 use rand::rngs::ThreadRng;
+use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use std::f64::consts::PI;
 
@@ -11,7 +14,6 @@ pub mod cdma;
 pub mod chaos;
 mod costas;
 pub mod csk;
-pub mod cyclostationary;
 pub mod dcsk;
 pub mod fh;
 pub mod fh_ofdm_dcsk;
@@ -22,9 +24,18 @@ pub mod hadamard;
 pub mod iter;
 pub mod ofdm;
 pub mod qpsk;
+pub mod ssca;
 mod turbo;
 mod util;
 mod willie;
+
+use crate::bpsk::{tx_baseband_bpsk_signal, tx_bpsk_signal};
+use crate::cdma::tx_cdma_bpsk_signal;
+use crate::fh_ofdm_dcsk::tx_fh_ofdm_dcsk_signal_2;
+use crate::hadamard::HadamardMatrix;
+use crate::iter::Iter;
+use crate::ofdm::tx_ofdm_qpsk_signal;
+use crate::ssca::ssca_base;
 
 pub type Bit = bool;
 
@@ -290,4 +301,158 @@ mod tests {
         assert_approx_eq!(e_sinx, 0.5);
         assert_approx_eq!(p_sinx, 5e-4);
     }
+}
+
+#[pyfunction]
+fn max_cut_detector(signal: Vec<f64>) -> f64 {
+    let np = 64;
+    let n = 4096;
+    let sxf = ssca_base(signal, n, np);
+
+    let lambda = sxf
+        .into_iter()
+        .map(|s_i| s_i.norm_sqr())
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+
+    10f64 * lambda.log10()
+}
+
+#[pyfunction]
+#[pyo3(name = "ssca")]
+pub fn ssca_py(
+    py: Python<'_>,
+    s: Vec<f64>,
+    n: usize,
+    np: usize,
+) -> Bound<'_, PyArray2<Complex<f64>>> {
+    let sx = ssca_base(s, n, np);
+    sx.into_pyarray_bound(py)
+}
+
+#[pyfunction]
+pub fn ssca_mapped(
+    py: Python<'_>,
+    s: Vec<f64>,
+    n: usize,
+    np: usize,
+) -> Bound<'_, PyArray2<Complex<f64>>> {
+    let sx = ssca_base(s, n, np);
+
+    let mut sxf: Array2<Complex<f64>> = Array2::zeros((np + 1, 2 * n + 1));
+    for q_p in 0..n {
+        for k_p in 0..np {
+            let f: f64 = k_p as f64 / (2f64 * np as f64) - q_p as f64 / (2f64 * n as f64);
+            let a: f64 = k_p as f64 / np as f64 + q_p as f64 / n as f64;
+            let k: usize = (np as f64 * (f + 0.5)) as usize;
+            let q: usize = (n as f64 * a) as usize;
+            sxf[[k, q]] = sx[[q_p, k_p]];
+        }
+    }
+
+    sxf.into_pyarray_bound(py)
+}
+
+#[pyfunction]
+pub fn random_data(py: Python<'_>, num_bits: usize) -> Bound<'_, PyArray1<Bit>> {
+    let mut rng = rand::thread_rng();
+    PyArray1::from_iter_bound(py, (0..num_bits).map(|_| rng.gen::<Bit>()))
+}
+
+#[pyfunction]
+fn energy_detector(signal: Vec<f64>) -> f64 {
+    10f64 * (signal.into_iter().map(|s_i| s_i.powi(2)).sum::<f64>()).log10()
+}
+
+#[pyfunction]
+#[pyo3(name = "awgn")]
+fn awgn_py(signal: Vec<f64>, sigma: f64) -> Vec<f64> {
+    signal
+        .into_iter()
+        .zip(
+            Normal::new(0f64, sigma)
+                .unwrap()
+                .sample_iter(rand::thread_rng()),
+        )
+        .map(|(sample, noise)| sample + noise)
+        .collect()
+}
+
+#[pymodule]
+#[pyo3(name = "komunikilo")]
+fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    /// Transmit a baseband signal.
+    #[pyfunction]
+    fn tx_baseband_bpsk(message: Vec<Bit>) -> Vec<Complex<f64>> {
+        tx_baseband_bpsk_signal(message.into_iter()).collect()
+    }
+
+    /// Transmit a BPSK signal.
+    #[pyfunction]
+    fn tx_bpsk(
+        message: Vec<Bit>,
+        sample_rate: usize,
+        symbol_rate: usize,
+        carrier_freq: f64,
+    ) -> Vec<f64> {
+        tx_bpsk_signal(message.into_iter(), sample_rate, symbol_rate, carrier_freq).collect()
+    }
+
+    /// Transmit an OFDM QPSK signal.
+    #[pyfunction]
+    fn tx_ofdm(
+        message: Vec<Bit>,
+        sample_rate: usize,
+        symbol_rate: usize,
+        carrier_freq: f64,
+    ) -> Vec<f64> {
+        tx_ofdm_qpsk_signal(message.into_iter(), sample_rate, symbol_rate, carrier_freq).collect()
+    }
+
+    /// Transmit a CDMA BPSK signal.
+    #[pyfunction]
+    fn tx_cdma_bpsk(
+        message: Vec<Bit>,
+        sample_rate: usize,
+        symbol_rate: usize,
+        carrier_freq: f64,
+    ) -> Vec<f64> {
+        let walsh_codes = HadamardMatrix::new(16);
+        let key: Vec<Bit> = walsh_codes.key(0).clone();
+        tx_cdma_bpsk_signal(
+            message.into_iter(),
+            sample_rate,
+            symbol_rate,
+            carrier_freq,
+            &key,
+        )
+        .collect()
+    }
+
+    #[pyfunction]
+    fn tx_fh_ofdm_dcsk(
+        message: Vec<Bit>,
+        sample_rate: usize,
+        symbol_rate: usize,
+        carrier_freq: f64,
+    ) -> Vec<f64> {
+        let res =
+            tx_fh_ofdm_dcsk_signal_2(message.into_iter(), sample_rate, symbol_rate, carrier_freq)
+                .collect();
+        println!("RUST: FHOFDMDCSK symbols ready for python");
+        res
+    }
+
+    m.add_function(wrap_pyfunction!(tx_baseband_bpsk, m)?)?;
+    m.add_function(wrap_pyfunction!(tx_bpsk, m)?)?;
+    m.add_function(wrap_pyfunction!(tx_cdma_bpsk, m)?)?;
+    m.add_function(wrap_pyfunction!(tx_ofdm, m)?)?;
+    m.add_function(wrap_pyfunction!(tx_fh_ofdm_dcsk, m)?)?;
+    m.add_function(wrap_pyfunction!(random_data, m)?)?;
+    m.add_function(wrap_pyfunction!(awgn_py, m)?)?;
+    m.add_function(wrap_pyfunction!(energy_detector, m)?)?;
+    m.add_function(wrap_pyfunction!(ssca_py, m)?)?;
+    m.add_function(wrap_pyfunction!(ssca_mapped, m)?)?;
+    m.add_function(wrap_pyfunction!(max_cut_detector, m)?)?;
+    Ok(())
 }

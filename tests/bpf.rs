@@ -1,4 +1,4 @@
-use komunikilo::bpf::bandpass;
+use komunikilo::bpf::{bandpass, butterpass};
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
 use std::f64::consts::PI;
@@ -33,15 +33,83 @@ fn it_works() {
         .collect();
 
     let eps = 20f64;
-    let filtered_signal: Vec<f64> =
-        bandpass(f1 - eps, f1 + eps, signal.iter().cloned(), sample_rate).collect();
+    const LEN: usize = 16000;
 
-    plot!(time[..500], signal[..500], "/tmp/bpf_before.png");
-    plot!(time[..500], filtered_signal[..500], "/tmp/bpf_after.png");
-    plot!(
-        time[..1000],
-        s1[..1000],
-        filtered_signal[..1000],
-        "/tmp/bpf_signal_before_and_after.png"
-    );
+    let fft_filtered_signal: Vec<f64> = bandpass(
+        f1 - eps,
+        f1 + eps,
+        signal.iter().cloned(),
+        sample_rate,
+        FFT_LEN,
+    )
+    .collect();
+
+    let butter_filtered_signal: Vec<f64> =
+        butterpass(f1 - eps, f1 + eps, signal.iter().cloned(), sample_rate).collect();
+
+    let regression = |x1: &[f64], x2: &[f64]| -> Vec<f64> {
+        x1.iter()
+            .zip(x2.iter())
+            .map(|(&x1i, &x2i)| (x1i - x2i).abs())
+            .collect()
+    };
+
+    let fft_least_squares: f64 = regression(&s1, &fft_filtered_signal)
+        .iter()
+        .map(|si| si.powi(2))
+        .sum();
+    let butter_least_squares: f64 = regression(&s1, &butter_filtered_signal)
+        .iter()
+        .map(|si| si.powi(2))
+        .sum();
+
+    assert!(fft_least_squares < butter_least_squares);
+
+    plot!(time[..500], signal[..500], "/tmp/bpf_signal.png");
+
+    Python::with_gil(|py| {
+        let locals = init_matplotlib!(py);
+
+        let fft_regres: Vec<f64> = regression(&s1, &fft_filtered_signal);
+        let butter_regres: Vec<f64> = regression(&s1, &butter_filtered_signal);
+
+        locals.set_item("time", &time[..LEN]).unwrap();
+        locals.set_item("s1", &s1[..LEN]).unwrap();
+        locals
+            .set_item("fft_filtered_signal", &fft_filtered_signal[..LEN])
+            .unwrap();
+        locals
+            .set_item("butter_filtered_signal", &butter_filtered_signal[..LEN])
+            .unwrap();
+        locals.set_item("fft_regres", &fft_regres[..LEN]).unwrap();
+        locals
+            .set_item("butter_regres", &butter_regres[..LEN])
+            .unwrap();
+
+        let (fig, axes): (&PyAny, &PyAny) = py
+            .eval_bound("plt.subplots(2)", None, Some(&locals))
+            .unwrap()
+            .extract()
+            .unwrap();
+        locals.set_item("fig", fig).unwrap();
+        locals.set_item("axes", axes).unwrap();
+        py.eval_bound("fig.set_size_inches(16, 9)", None, Some(&locals))
+            .unwrap();
+        for line in [
+            "axes[0].plot(time, s1, label='Orignal Signal')",
+            "axes[0].plot(time, fft_filtered_signal, label='FFT_Filtered')",
+            "axes[0].plot(time, butter_filtered_signal, label='Butterworth Filter')",
+            "axes[0].legend()",
+            "axes[1].plot(time, fft_regres, label='FFT Regression')",
+            "axes[1].plot(time, butter_regres, label='Butterworth Regression')",
+            "axes[1].legend()",
+            &format!(
+                "fig.savefig('{}')",
+                "/tmp/bpf_butter_and_fft_signal_before_and_after.png"
+            ),
+            "plt.close('all')",
+        ] {
+            py.eval_bound(line, None, Some(&locals)).unwrap();
+        }
+    })
 }

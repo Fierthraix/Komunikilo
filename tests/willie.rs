@@ -31,17 +31,18 @@ fn p_values() -> PyResult<()> {
         tx_bpsk_signal(data.iter().cloned(), samp_rate, symb_rate, freq).collect();
 
     Python::with_gil(|py| {
-        let scipy = py.import("scipy")?;
-        let matplotlib = py.import("matplotlib")?;
-        let plt = py.import("matplotlib.pyplot")?;
-        let locals = [("scipy", scipy), ("matplotlib", matplotlib), ("plt", plt)].into_py_dict(py);
-        py.eval("matplotlib.use('agg')", None, Some(&locals))?;
+        let scipy = py.import_bound("scipy")?;
+        let matplotlib = py.import_bound("matplotlib")?;
+        let plt = py.import_bound("matplotlib.pyplot")?;
+        let locals =
+            [("scipy", scipy), ("matplotlib", matplotlib), ("plt", plt)].into_py_dict_bound(py);
+        py.eval_bound("matplotlib.use('agg')", None, Some(&locals))?;
 
         locals.set_item("tx_bpsk", tx_bpsk)?;
         locals.set_item("tx_cdma", tx_cdma)?;
 
         // Check their p-values !!
-        let p_vals: Py<PyAny> = PyModule::from_code(
+        let p_vals: Py<PyAny> = PyModule::from_code_bound(
             py,
             "def p_vals(signal):
                 from random import gauss
@@ -67,8 +68,12 @@ fn p_values() -> PyResult<()> {
 
         locals.set_item("p_vals", p_vals)?;
 
-        let cdma_p_vals: Vec<f64> = py.eval("p_vals(tx_cdma)", None, Some(&locals))?.extract()?;
-        let bpsk_p_vals: Vec<f64> = py.eval("p_vals(tx_bpsk)", None, Some(&locals))?.extract()?;
+        let cdma_p_vals: Vec<f64> = py
+            .eval_bound("p_vals(tx_cdma)", None, Some(&locals))?
+            .extract()?;
+        let bpsk_p_vals: Vec<f64> = py
+            .eval_bound("p_vals(tx_bpsk)", None, Some(&locals))?
+            .extract()?;
         let x: Vec<f64> = linspace(1e-10, 5f64, cdma_p_vals.len()).collect();
         plot!(x, bpsk_p_vals, cdma_p_vals, "/tmp/willie_001.png");
         println!("{}", cdma_p_vals.len());

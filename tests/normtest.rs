@@ -4,8 +4,6 @@ use komunikilo::cdma::{rx_cdma_bpsk_signal, tx_cdma_bpsk_signal};
 use komunikilo::hadamard::HadamardMatrix;
 use komunikilo::{awgn, linspace, Bit};
 use num::Float;
-use pyo3::prelude::*;
-use pyo3::types::IntoPyDict;
 use rand::Rng;
 
 concatenate!(NormTest, [Kurtosis, kurtosis], [Skewness, skewness]);

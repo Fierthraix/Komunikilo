@@ -3,10 +3,10 @@ use pyo3::types::IntoPyDict;
 
 macro_rules! init_matplotlib {
     ($py: expr) => {{
-        let matplotlib = $py.import("matplotlib").unwrap();
-        let plt = $py.import("matplotlib.pyplot").unwrap();
-        let locals = [("matplotlib", matplotlib), ("plt", plt)].into_py_dict($py);
-        $py.eval("matplotlib.use('agg')", None, Some(&locals))
+        let matplotlib = $py.import_bound("matplotlib").unwrap();
+        let plt = $py.import_bound("matplotlib.pyplot").unwrap();
+        let locals = [("matplotlib", matplotlib), ("plt", plt)].into_py_dict_bound($py);
+        $py.eval_bound("matplotlib.use('agg')", None, Some(&locals))
             .unwrap();
         locals
     }};
@@ -20,7 +20,7 @@ macro_rules! plot {
             locals.set_item("x", &$x).unwrap();
             locals.set_item("y", &$y).unwrap();
             let (fig, axes): (&PyAny, &PyAny) = py
-                .eval("plt.subplots(1)", None, Some(&locals))
+                .eval_bound("plt.subplots(1)", None, Some(&locals))
                 .unwrap()
                 .extract()
                 .unwrap();
@@ -32,7 +32,7 @@ macro_rules! plot {
                 &format!("fig.savefig('{}')", $name),
                 "plt.close('all')",
             ] {
-                py.eval(line, None, Some(&locals)).unwrap();
+                py.eval_bound(line, None, Some(&locals)).unwrap();
             }
         })
     };
@@ -47,16 +47,16 @@ macro_rules! plot {
             locals.set_item("y1", &$y1).unwrap();
             locals.set_item("y2", &$y2).unwrap();
             let (fig, axes): (&PyAny, &PyAny) = py
-                .eval("plt.subplots(1)", None, Some(&locals))
+                .eval_bound("plt.subplots(1)", None, Some(&locals))
                 .unwrap()
                 .extract()
                 .unwrap();
             locals.set_item("fig", fig).unwrap();
             locals.set_item("axes", axes).unwrap();
-            py.eval("fig.set_size_inches(16, 9)", None, Some(&locals))
+            py.eval_bound("fig.set_size_inches(16, 9)", None, Some(&locals))
                 .unwrap();
             if $log {
-                py.eval("axes.set_yscale('log')", None, Some(&locals))
+                py.eval_bound("axes.set_yscale('log')", None, Some(&locals))
                     .unwrap();
             }
             for line in [
@@ -65,7 +65,7 @@ macro_rules! plot {
                 &format!("fig.savefig('{}')", $name),
                 "plt.close('all')",
             ] {
-                py.eval(line, None, Some(&locals)).unwrap();
+                py.eval_bound(line, None, Some(&locals)).unwrap();
             }
         })
     };
@@ -82,16 +82,16 @@ macro_rules! ber_plot {
             locals.set_item("x", &$x).unwrap();
             locals.set_item("y", &$y).unwrap();
             let (fig, axes): (&PyAny, &PyAny) = py
-                .eval("plt.subplots(1)", None, Some(&locals))
+                .eval_bound("plt.subplots(1)", None, Some(&locals))
                 .unwrap()
                 .extract()
                 .unwrap();
             locals.set_item("fig", fig).unwrap();
             locals.set_item("axes", axes).unwrap();
-            py.eval("fig.set_size_inches(16, 9)", None, Some(&locals))
+            py.eval_bound("fig.set_size_inches(16, 9)", None, Some(&locals))
                 .unwrap();
             if $log {
-                py.eval("axes.set_yscale('log')", None, Some(&locals))
+                py.eval_bound("axes.set_yscale('log')", None, Some(&locals))
                     .unwrap();
             }
             for line in [
@@ -99,9 +99,44 @@ macro_rules! ber_plot {
                 &format!("fig.savefig('{}')", $name),
                 "plt.close('all')",
             ] {
-                py.eval(line, None, Some(&locals)).unwrap();
+                py.eval_bound(line, None, Some(&locals)).unwrap();
             }
         })
+    };
+}
+
+macro_rules! dot_plot {
+    ($i:expr, $q:expr, $name:expr) => {
+        Python::with_gil(|py| {
+            let locals = init_matplotlib!(py);
+
+            locals.set_item("i", &$i).unwrap();
+            locals.set_item("q", &$q).unwrap();
+            let (fig, axes): (&PyAny, &PyAny) = py
+                .eval_bound("plt.subplots(1)", None, Some(&locals))
+                .unwrap()
+                .extract()
+                .unwrap();
+            locals.set_item("fig", fig).unwrap();
+            locals.set_item("axes", axes).unwrap();
+            py.eval_bound("fig.set_size_inches(16, 9)", None, Some(&locals))
+                .unwrap();
+            for line in [
+                "axes.plot(i, q, marker='.', linestyle='None')",
+                &format!("fig.savefig('{}')", $name),
+                "plt.close('all')",
+            ] {
+                py.eval_bound(line, None, Some(&locals)).unwrap();
+            }
+        })
+    };
+}
+
+macro_rules! iq_plot {
+    ($iq_data:expr, $name:expr) => {
+        let i: Vec<_> = $iq_data.iter().cloned().map(|s_i| s_i.re).collect();
+        let q: Vec<_> = $iq_data.iter().cloned().map(|s_i| s_i.im).collect();
+        dot_plot!(i, q, $name)
     };
 }
 
@@ -125,6 +160,47 @@ pub fn not_inf(num: f64) -> f64 {
     } else {
         num
     }
+}
+
+pub fn fit_erfc(x: &[f64], y: &[f64]) -> (f64, f64, f64, f64) {
+    Python::with_gil(|py| {
+        let scipy = PyModule::import_bound(py, "scipy")?;
+        let locals = [("scipy", scipy)].into_py_dict_bound(py);
+
+        locals.set_item("x", x)?;
+        locals.set_item("y", y)?;
+
+        let erfc: Py<PyAny> = PyModule::from_code_bound(
+            py,
+            "def erfc(x, a, b, z, f):
+                from scipy.special import erfc
+                return a * erfc((x - z) * f) + b",
+            "",
+            "",
+        )?
+        .getattr("erfc")?
+        .into();
+        locals.set_item("erfc", erfc)?;
+
+        let popt: Vec<f64> = py
+            .eval_bound(
+                "scipy.optimize.curve_fit(erfc, x, y, maxfev=8_000_000)[0]",
+                None,
+                Some(&locals),
+            )?
+            .extract()?;
+
+        let mut x = popt.into_iter();
+        let a = (
+            x.next().unwrap(),
+            x.next().unwrap(),
+            x.next().unwrap(),
+            x.next().unwrap(),
+        );
+
+        Ok::<(f64, f64, f64, f64), PyErr>(a)
+    })
+    .unwrap()
 }
 
 pub fn save_vector(v: &[f64], filename: &str) -> Result<(), std::io::Error> {
