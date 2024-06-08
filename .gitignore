@@ -1,8 +1,8 @@
 /target
 /*.lock
 *.ignore
-*.py
 *.txt
 *.so
 **/__pycache__/*
 **/profiles/*
+**/plots/*

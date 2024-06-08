@@ -1,6 +1,6 @@
 use crate::{chaos::LogisticMap, Bit};
 
-fn tx_baseband_csk<I: Iterator<Item = Bit>>(message: I) -> impl Iterator<Item = f64> {
+pub fn tx_baseband_csk<I: Iterator<Item = Bit>>(message: I) -> impl Iterator<Item = f64> {
     let mu = 3.9;
     let x0_1 = 0.1;
     let x0_2 = 0.15;
@@ -25,7 +25,7 @@ mod tests {
 
     use super::*;
     extern crate rand;
-    use crate::csk::tests::rand::Rng;
+    use crate::Rng;
 
     #[test]
     fn baseband_csk() {

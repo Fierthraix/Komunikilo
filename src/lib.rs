@@ -31,7 +31,10 @@ mod willie;
 
 use crate::bpsk::{tx_baseband_bpsk_signal, tx_bpsk_signal};
 use crate::cdma::tx_cdma_bpsk_signal;
+use crate::csk::tx_baseband_csk;
+use crate::dcsk::tx_baseband_dcsk;
 use crate::fh_ofdm_dcsk::tx_fh_ofdm_dcsk_signal_2;
+use crate::fsk::tx_bfsk_signal;
 use crate::hadamard::HadamardMatrix;
 use crate::iter::Iter;
 use crate::ofdm::tx_ofdm_qpsk_signal;
@@ -430,6 +433,42 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     }
 
     #[pyfunction]
+    fn tx_bfsk(
+        message: Vec<Bit>,
+        sample_rate: usize,
+        symbol_rate: usize,
+        freq_low: f64,
+        freq_high: f64,
+    ) -> Vec<f64> {
+        tx_bfsk_signal(
+            message.into_iter(),
+            sample_rate,
+            symbol_rate,
+            freq_low,
+            freq_high,
+        )
+        .collect()
+    }
+
+    #[pyfunction]
+    fn tx_csk(message: Vec<Bit>, sample_rate: usize, symbol_rate: usize) -> Vec<f64> {
+        assert!(is_int(sample_rate as f64 / symbol_rate as f64));
+        let samples_per_symbol: usize = sample_rate / symbol_rate;
+        tx_baseband_csk(message.into_iter())
+            .inflate(samples_per_symbol)
+            .collect()
+    }
+
+    #[pyfunction]
+    fn tx_dcsk(message: Vec<Bit>, sample_rate: usize, symbol_rate: usize) -> Vec<f64> {
+        assert!(is_int(sample_rate as f64 / symbol_rate as f64));
+        let samples_per_symbol: usize = sample_rate / symbol_rate;
+        tx_baseband_dcsk(message.into_iter())
+            .inflate(samples_per_symbol)
+            .collect()
+    }
+
+    #[pyfunction]
     fn tx_fh_ofdm_dcsk(
         message: Vec<Bit>,
         sample_rate: usize,
@@ -447,6 +486,9 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tx_bpsk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_cdma_bpsk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_ofdm, m)?)?;
+    m.add_function(wrap_pyfunction!(tx_csk, m)?)?;
+    m.add_function(wrap_pyfunction!(tx_dcsk, m)?)?;
+    m.add_function(wrap_pyfunction!(tx_bfsk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_fh_ofdm_dcsk, m)?)?;
     m.add_function(wrap_pyfunction!(random_data, m)?)?;
     m.add_function(wrap_pyfunction!(awgn_py, m)?)?;

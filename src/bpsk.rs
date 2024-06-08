@@ -68,7 +68,7 @@ mod tests {
     extern crate itertools;
     extern crate rand;
     extern crate rand_distr;
-    use crate::bpsk::tests::rand::Rng;
+    use crate::Rng;
 
     #[test]
     fn baseband() {
