@@ -127,7 +127,7 @@ pub fn tx_fh_bpsk_signal_old<I: Iterator<Item = Bit>>(
 
             let bandwidth = (high_freq - low_freq) / (num_freqs as f64);
             let sum_freq = hop_freq + carrier_freq;
-            let (low, high) = (sum_freq - (bandwidth / 2f64), sum_freq + (bandwidth / 2f64));
+            let (_low, _high) = (sum_freq - (bandwidth / 2f64), sum_freq + (bandwidth / 2f64));
             /*
             let filter = {
                 let bandpass_filter = butter_dyn(

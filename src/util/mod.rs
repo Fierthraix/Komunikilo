@@ -1,5 +1,3 @@
-use crate::Bit;
-use rand::Rng;
 
 macro_rules! test_data {
     ($num_bits:expr) => {{

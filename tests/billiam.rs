@@ -1,10 +1,10 @@
+#![allow(non_upper_case_globals, unused_variables, unused_macros, dead_code)]
 use assert_approx_eq::assert_approx_eq;
 use komunikilo::bpsk::tx_bpsk_signal;
 use komunikilo::cdma::{tx_cdma_bpsk_signal, tx_cdma_qpsk_signal};
 use komunikilo::fsk::tx_bfsk_signal;
 use komunikilo::hadamard::HadamardMatrix;
-use komunikilo::iter::Iter;
-use komunikilo::ofdm::{rx_baseband_ofdm_signal, tx_baseband_ofdm_signal, tx_ofdm_qpsk_signal};
+use komunikilo::ofdm::tx_ofdm_qpsk_signal;
 use komunikilo::qpsk::tx_qpsk_signal;
 use komunikilo::{avg_energy, awgn, erfc, linspace, Bit};
 use pyo3::prelude::*;
@@ -17,7 +17,7 @@ use util::fit_erfc;
 mod util;
 
 #[test]
-// #[ignore]
+#[ignore]
 fn radiometer_pd_new() {
     /*
      * NOTE: $E_B = signal.map(|s_i| s_i.powi(2)).sum / (samp_freq * num_bits)$

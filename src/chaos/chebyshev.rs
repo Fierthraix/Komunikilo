@@ -13,7 +13,7 @@ pub struct Chebyshev {
 
 impl Chebyshev {
     pub fn new(x0: f64) -> Self {
-        assert!(x0 >= -1f64 && x0 <= 1f64);
+        assert!((-1f64..=1f64).contains(&x0));
         Self { xn: x0 }
     }
 }

@@ -15,7 +15,7 @@ pub fn bch_stream_encode<I: Iterator<Item = Bit>>(data: I) -> impl Iterator<Item
             let encoded: Vec<u8> = Vec::from(&enc.encode(&chunk)[..]);
             encoded.into_iter()
         })
-        .flat_map(|byte| u8_to_bools(byte))
+        .flat_map(u8_to_bools)
 }
 
 pub fn bch_stream_decode<I: Iterator<Item = Bit>>(data: I) -> impl Iterator<Item = Bit> {
@@ -36,7 +36,7 @@ pub fn bch_stream_decode<I: Iterator<Item = Bit>>(data: I) -> impl Iterator<Item
                 data.into_iter()
             }
         })
-        .flat_map(|byte| u8_to_bools(byte))
+        .flat_map(u8_to_bools)
 }
 
 #[cfg(test)]

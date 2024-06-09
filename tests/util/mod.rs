@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_macros)]
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
 

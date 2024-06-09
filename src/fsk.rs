@@ -29,7 +29,7 @@ pub fn tx_mfsk_signal<I: Iterator<Item = Bit>>(
     symbol_rate: usize,
     freq_low: f64,
     freq_high: f64,
-    num_freqs: usize,
+    _num_freqs: usize,
 ) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
     let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
@@ -70,11 +70,11 @@ pub fn tx_fsk_signal<I: Iterator<Item = Bit>>(
         })
 }
 fn rx_bfsk_signal<I: Iterator<Item = f64>>(
-    signal: I,
-    sample_rate: usize,
-    symbol_rate: usize,
-    freq_low: f64,
-    freq_high: f64,
+    _signal: I,
+    _sample_rate: usize,
+    _symbol_rate: usize,
+    _freq_low: f64,
+    _freq_high: f64,
 ) -> impl Iterator<Item = Bit> {
     [true].into_iter()
 }

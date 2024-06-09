@@ -1,20 +1,9 @@
-use assert_approx_eq::assert_approx_eq;
 use itertools::iproduct;
-use komunikilo::bpsk::tx_bpsk_signal;
-use komunikilo::cdma::{tx_cdma_bpsk_signal, tx_cdma_qpsk_signal};
-use komunikilo::fsk::tx_bfsk_signal;
-use komunikilo::hadamard::HadamardMatrix;
-use komunikilo::iter::Iter;
-use komunikilo::ofdm::{rx_baseband_ofdm_signal, tx_baseband_ofdm_signal, tx_ofdm_qpsk_signal};
-use komunikilo::qpsk::tx_qpsk_signal;
-use komunikilo::{avg_energy, awgn, erfc, linspace, Bit};
+use komunikilo::{avg_energy, awgn, linspace};
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
-use rand::Rng;
-use rayon::prelude::*;
 use std::collections::HashMap;
 use std::iter::repeat;
-use util::fit_erfc;
 
 #[macro_use]
 mod util;

@@ -1,4 +1,3 @@
-use crate::cdma::rx_baseband_cdma;
 use crate::iter::Iter;
 use crate::qpsk::{rx_baseband_qpsk_signal, tx_baseband_qpsk_signal};
 use crate::{fftshift, is_int, Bit};
@@ -15,7 +14,7 @@ pub fn tx_baseband_ofdm_signal<I: Iterator<Item = Complex<f64>>>(
 
     let data_subcarriers: Vec<usize> = [(6..32), (33..59)]
         .iter()
-        .flat_map(|i| i.clone().into_iter())
+        .flat_map(|i| i.clone())
         .collect();
 
     let mut fftp = FftPlanner::new();
@@ -29,7 +28,7 @@ pub fn tx_baseband_ofdm_signal<I: Iterator<Item = Complex<f64>>>(
             let mut ofdm_symbol_data = vec![Complex::zero(); n_subcarriers];
             data_subcarriers
                 .iter()
-                .zip(data_chunk.into_iter())
+                .zip(data_chunk)
                 .for_each(|(&carrier, datum)| ofdm_symbol_data[carrier] = datum);
 
             let mut ofdm_symbols = fftshift(&ofdm_symbol_data);
@@ -59,7 +58,7 @@ pub fn rx_baseband_ofdm_signal<I: Iterator<Item = Complex<f64>>>(
 
     let data_subcarriers: Vec<usize> = [(6..32), (33..59)]
         .iter()
-        .flat_map(|i| i.clone().into_iter())
+        .flat_map(|i| i.clone())
         .collect();
 
     let mut fftp = FftPlanner::new();

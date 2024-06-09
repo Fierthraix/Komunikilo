@@ -1,3 +1,4 @@
+#![allow(unused_macros, dead_code)]
 use num_complex::Complex;
 use numpy::ndarray::Array2;
 use numpy::{IntoPyArray, PyArray1, PyArray2};
@@ -26,7 +27,6 @@ pub mod iter;
 pub mod ofdm;
 pub mod qpsk;
 pub mod ssca;
-mod turbo;
 mod util;
 mod willie;
 

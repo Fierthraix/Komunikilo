@@ -158,7 +158,7 @@ pub fn tx_fh_ofdm_dcsk_signal_2<I: Iterator<Item = Bit>>(
 mod tests {
     use super::*;
     extern crate rand;
-    use crate::fh_ofdm_dcsk::{self, tests::rand::Rng};
+    use crate::fh_ofdm_dcsk::{tests::rand::Rng};
 
     #[test]
     #[ignore] // TODO: FIXME: this test.

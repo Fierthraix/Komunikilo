@@ -1,3 +1,4 @@
+#![allow(unused_variables, non_upper_case_globals)]
 use komunikilo::bpsk::{
     rx_baseband_bpsk_signal, rx_bpsk_signal, tx_baseband_bpsk_signal, tx_bpsk_signal,
 };

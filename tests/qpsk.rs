@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 use komunikilo::qpsk::{rx_qpsk_signal, tx_baseband_qpsk_signal, tx_qpsk_signal};
 use komunikilo::{awgn, iter::Iter, Bit};
 use num::Complex;

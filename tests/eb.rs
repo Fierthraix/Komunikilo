@@ -1,13 +1,10 @@
-use assert_approx_eq::assert_approx_eq;
+#![allow(non_upper_case_globals)]
 use komunikilo::bpsk::tx_bpsk_signal;
 use komunikilo::cdma::{tx_cdma_bpsk_signal, tx_cdma_qpsk_signal};
 use komunikilo::fsk::tx_bfsk_signal;
 use komunikilo::hadamard::HadamardMatrix;
-use komunikilo::iter::Iter;
 use komunikilo::qpsk::tx_qpsk_signal;
-use komunikilo::{avg_energy, awgn, erfc, linspace, Bit};
-use pyo3::prelude::*;
-use pyo3::types::IntoPyDict;
+use komunikilo::{avg_energy, Bit};
 use rand::Rng;
 
 #[macro_use]

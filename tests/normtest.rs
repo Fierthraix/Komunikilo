@@ -1,9 +1,9 @@
+#![allow(unused_variables, dead_code, non_snake_case)]
 use average::{concatenate, Estimate, Kurtosis, Skewness};
-use komunikilo::bpsk::{rx_bpsk_signal, tx_bpsk_signal};
-use komunikilo::cdma::{rx_cdma_bpsk_signal, tx_cdma_bpsk_signal};
+use komunikilo::bpsk::tx_bpsk_signal;
+use komunikilo::cdma::tx_cdma_bpsk_signal;
 use komunikilo::hadamard::HadamardMatrix;
-use komunikilo::{awgn, linspace, Bit};
-use num::Float;
+use komunikilo::{awgn, Bit};
 use rand::Rng;
 
 concatenate!(NormTest, [Kurtosis, kurtosis], [Skewness, skewness]);

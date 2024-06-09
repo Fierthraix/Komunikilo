@@ -1,6 +1,4 @@
-use crate::linspace;
 use pyo3::prelude::*;
-use pyo3::types::IntoPyDict;
 
 fn normaltest(signal: &[f64]) -> f64 {
     Python::with_gil(|py| {

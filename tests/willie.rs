@@ -1,5 +1,5 @@
-use komunikilo::bpsk::{rx_bpsk_signal, tx_bpsk_signal};
-use komunikilo::cdma::{rx_cdma_bpsk_signal, tx_cdma_bpsk_signal};
+use komunikilo::bpsk::{tx_bpsk_signal};
+use komunikilo::cdma::{tx_cdma_bpsk_signal};
 use komunikilo::hadamard::HadamardMatrix;
 use komunikilo::{avg_energy, awgn, linspace, Bit};
 use pyo3::prelude::*;

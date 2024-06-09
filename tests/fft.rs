@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
 use realfft::RealFftPlanner;
 use rustfft::num_traits::Zero;
-use rustfft::{num_complex::Complex, FftPlanner};
+use rustfft::{num_complex::Complex};
 use sci_rs::signal::filter::{design::*, sosfiltfilt_dyn};
 
 // use rustfft::

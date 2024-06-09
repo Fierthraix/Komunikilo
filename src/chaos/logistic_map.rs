@@ -10,7 +10,7 @@ pub struct LogisticMap {
 
 impl LogisticMap {
     pub fn new(mu: f64, x0: f64) -> Self {
-        assert!(x0 >= 0f64 && x0 <= 1f64);
+        assert!((0f64..=1f64).contains(&x0));
         Self { mu, xn: x0 }
     }
 }

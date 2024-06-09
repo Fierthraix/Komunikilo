@@ -1,6 +1,5 @@
 use crate::{fh::HopTable, is_int, linspace, Bit};
 use num::traits::Inv;
-use rand::prelude::*;
 use std::f64::consts::PI;
 
 const SEED: u64 = 64;
