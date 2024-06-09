@@ -7,12 +7,13 @@ from komunikilo import (
     tx_bfsk,
     tx_bpsk,
     tx_cdma_bpsk,
+    tx_fh_css,
     tx_ofdm,
     tx_csk,
     tx_dcsk,
     tx_fh_ofdm_dcsk,
 )
-from util import secs_to_str, timeit, db, undb
+from util import timeit, db, undb
 from willie import avg_energy
 
 from dataclasses import dataclass, field
@@ -27,7 +28,6 @@ from scipy.stats import rv_histogram
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
-import time
 from tqdm import tqdm
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
@@ -207,7 +207,11 @@ def curry_lr(ht) -> pd.DataFrame:
 
 
 def __run(
-    tx: Tx, snrs: List[float], label="", num_attempts: int = 200
+    tx: Tx,
+    snrs: List[float],
+    label="",
+    num_attempts: int = 200,
+    progress: Optional[tqdm] = None,
 ) -> Dict[str, DetectorTestResults]:
     NUM_BITS: int = 120
 
@@ -228,10 +232,12 @@ def __run(
     nrg = DetectorTestResults(detect_fn=energy_detector, snrs=snrs)
     # dcs_cut = DetectorTestResults
 
-    with multiprocessing.Pool(8) as p, timeit("Detectors") as _:
-        _loop_start = time.monotonic()
-        for i, n0 in tqdm(enumerate(n0s), desc="Detector"):
-            _iter_start = time.monotonic()
+    if not progress:
+        progress = tqdm(total=len(n0s))
+
+    with multiprocessing.Pool(8) as p:
+        # for i, n0 in progress(enumerate(n0s), desc=label or "Detectors"):
+        for i, n0 in enumerate(n0s):
             # Make the H0's
             logger.debug(f"N0: {n0}")
             signals: List[np.array] = [
@@ -251,14 +257,7 @@ def __run(
             h1_λs: List[float] = p.map(energy_detector, signals)
             nrg.h0s.append(h0_λs)
             nrg.h1s.append(h1_λs)
-
-            _iter_time = time.monotonic() - _iter_start
-            _loop_time = time.monotonic() - _loop_start
-
-            eta = _iter_time * (len(n0s) - i + 1)
-            logger.info(
-                f"{(i+1) * 100 / len(n0s):.2f}% | Elapsed: {secs_to_str(_loop_time)} | ETA: {secs_to_str(eta)}"
-            )
+            progress.update(1)
 
     with multiprocessing.Pool(8) as p, timeit("Logistic Regressions") as _:
         lrs_max_cut: List[pd.DataFrame] = p.map(curry_lr, zip(max_cut.h0s, max_cut.h1s))
@@ -281,11 +280,9 @@ def __run(
 
 
 if __name__ == "__main__":
-    SAMPLE_RATE: float = 43200
-    SYMBOL_RATE: float = 900
-    CARRIER_FREQ: float = 1800
-    NUM_ATTEMPTS: int = 200
-    # NUM_ATTEMPTS: int = 50
+    SAMPLE_RATE: float = 2**16  # 65536
+    SYMBOL_RATE: float = 2**8  # 256
+    CARRIER_FREQ: float = 2000
 
     def ofdm_signal(data: List[bool]) -> np.array:
         return tx_ofdm(data, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ)
@@ -298,6 +295,12 @@ if __name__ == "__main__":
 
     def bfsk_signal(data: List[bool]) -> np.array:
         return tx_bfsk(data, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ * 0.8, CARRIER_FREQ)
+
+    def fh_css_signal(data: List[bool]) -> np.array:
+        f_low = 2e3
+        f_high = 1e4
+        num_freqs = 8
+        return tx_fh_css(data, SAMPLE_RATE, SYMBOL_RATE, f_low, f_high, num_freqs)
 
     def csk_signal(data: List[bool]) -> np.array:
         return tx_csk(data, SAMPLE_RATE, SYMBOL_RATE)
@@ -313,18 +316,22 @@ if __name__ == "__main__":
         "BPSK": bpsk_signal,
         "CDMA": cdma_signal,
         "OFDM": ofdm_signal,
+        "FH-CSS": fh_css_signal,
         "CSK": csk_signal,
         "DCSK": dcsk_signal,
         # "FH-OFDM-DCSK": fh_ofdm_dcsk_signal,
     }
 
-    # snrs: np.array = np.linspace(1e-5, 0.5, 50)
-    # snrs: np.array = undb(np.linspace(-75, -3, 5))
+    NUM_ATTEMPTS: int = 2000
+    # NUM_ATTEMPTS: int = 50
     # snrs: np.array = undb(np.linspace(-75, -3, 50))
-    snrs: np.array = undb(np.linspace(-75, 0, 150))
+    # snrs: np.array = undb(np.linspace(-75, 0, 150))
+    # snrs: np.array = undb(np.linspace(-30, -3, 150))
+    snrs: np.array = undb(np.linspace(-20, -3, 100))
+    progress = tqdm(total=len(snrs) * len(harness))
     results = {
-        key: __run(func, snrs, label=key, num_attempts=NUM_ATTEMPTS)
-        for key, func in tqdm(harness.items(), desc="Overall")
+        key: __run(func, snrs, label=key, num_attempts=NUM_ATTEMPTS, progress=progress)
+        for key, func in harness.items()
     }
 
     plot_youden_j_with_multiple_modulations(results, "MaxCut")
