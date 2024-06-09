@@ -16,6 +16,7 @@ mod costas;
 pub mod csk;
 pub mod dcsk;
 pub mod fh;
+pub mod fh_css;
 pub mod fh_ofdm_dcsk;
 mod filters;
 pub mod fm;
@@ -33,6 +34,7 @@ use crate::bpsk::{tx_baseband_bpsk_signal, tx_bpsk_signal};
 use crate::cdma::tx_cdma_bpsk_signal;
 use crate::csk::tx_baseband_csk;
 use crate::dcsk::tx_baseband_dcsk;
+use crate::fh_css::{linear_chirp, tx_fh_css_signal};
 use crate::fh_ofdm_dcsk::tx_fh_ofdm_dcsk_signal_2;
 use crate::fsk::tx_bfsk_signal;
 use crate::hadamard::HadamardMatrix;
@@ -291,7 +293,7 @@ mod tests {
         let start = 0f64;
         let stop = 1f64;
         let steps: usize = 1000;
-        let sample_rate: f64 = steps as f64 / (stop - start) as f64;
+        let sample_rate: f64 = steps as f64 / (stop - start);
         let t: Vec<f64> = linspace(start, stop, steps).collect();
         let sinx: Vec<f64> = t.iter().map(|&t| (2f64 * PI * fc * t).sin()).collect();
         let _sinx2: Vec<f64> = t
@@ -381,6 +383,11 @@ fn awgn_py(signal: Vec<f64>, sigma: f64) -> Vec<f64> {
         .collect()
 }
 
+#[pyfunction]
+fn chirp(chirp_rate: f64, sample_rate: usize, f0: f64, f1: f64) -> Vec<f64> {
+    linear_chirp(chirp_rate, sample_rate, f0, f1).collect()
+}
+
 #[pymodule]
 #[pyo3(name = "komunikilo")]
 fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -451,6 +458,26 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     }
 
     #[pyfunction]
+    fn tx_fh_css(
+        message: Vec<Bit>,
+        sample_rate: usize,
+        symbol_rate: usize,
+        freq_low: f64,
+        freq_high: f64,
+        num_freqs: usize,
+    ) -> Vec<f64> {
+        tx_fh_css_signal(
+            message.into_iter(),
+            sample_rate,
+            symbol_rate,
+            freq_low,
+            freq_high,
+            num_freqs,
+        )
+        .collect()
+    }
+
+    #[pyfunction]
     fn tx_csk(message: Vec<Bit>, sample_rate: usize, symbol_rate: usize) -> Vec<f64> {
         assert!(is_int(sample_rate as f64 / symbol_rate as f64));
         let samples_per_symbol: usize = sample_rate / symbol_rate;
@@ -489,9 +516,11 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tx_csk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_dcsk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_bfsk, m)?)?;
+    m.add_function(wrap_pyfunction!(tx_fh_css, m)?)?;
     m.add_function(wrap_pyfunction!(tx_fh_ofdm_dcsk, m)?)?;
     m.add_function(wrap_pyfunction!(random_data, m)?)?;
     m.add_function(wrap_pyfunction!(awgn_py, m)?)?;
+    m.add_function(wrap_pyfunction!(chirp, m)?)?;
     m.add_function(wrap_pyfunction!(energy_detector, m)?)?;
     m.add_function(wrap_pyfunction!(ssca_py, m)?)?;
     m.add_function(wrap_pyfunction!(ssca_mapped, m)?)?;

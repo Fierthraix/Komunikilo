@@ -1,8 +1,6 @@
-use crate::bpf::{bandpass, butterpass};
 use crate::bpsk::{rx_bpsk_signal, tx_bpsk_signal};
 use crate::iter::Iter;
 use crate::{bit_to_nrz, is_int, linspace, Bit};
-use sci_rs::signal::filter::{design::*, sosfiltfilt_dyn};
 use std::f64::consts::PI;
 
 use rand::prelude::*;
@@ -69,7 +67,7 @@ pub fn tx_fh_bpsk_signal<I: Iterator<Item = Bit>>(
     assert!(is_int(sample_rate as f64 / symbol_rate as f64));
 
     message
-        .zip(HopTable::new(low_freq, high_freq, num_freqs, SEED).into_iter())
+        .zip(HopTable::new(low_freq, high_freq, num_freqs, SEED))
         .flat_map(move |(msg_val, hop_freq)| {
             tx_bpsk_signal([msg_val].into_iter(), sample_rate, symbol_rate, hop_freq)
         })
@@ -89,7 +87,7 @@ pub fn rx_fh_bpsk_signal<I: Iterator<Item = f64>>(
 
     signal
         .chunks(samples_per_symbol)
-        .zip(HopTable::new(low_freq, high_freq, num_freqs, SEED).into_iter())
+        .zip(HopTable::new(low_freq, high_freq, num_freqs, SEED))
         .flat_map(move |(signal_chunk, hop_freq)| {
             rx_bpsk_signal(signal_chunk.into_iter(), sample_rate, symbol_rate, hop_freq)
         })
@@ -112,7 +110,7 @@ pub fn tx_fh_bpsk_signal_old<I: Iterator<Item = Bit>>(
 
     message
         .map(bit_to_nrz)
-        .zip(HopTable::new(low_freq, high_freq, num_freqs, SEED).into_iter())
+        .zip(HopTable::new(low_freq, high_freq, num_freqs, SEED))
         .enumerate()
         .flat_map(move |(idx, (msg_val, hop_freq))| {
             let time = (idx * samples_per_symbol) as f64 * t_step;
@@ -168,7 +166,6 @@ mod tests {
         let high = 20e3;
         let num_freqs = 8;
         let hops: Vec<Vec<f64>> = HopTable::new(low, high, num_freqs, SEED)
-            .into_iter()
             .take(8 * 5)
             .chunks(8)
             .collect();
