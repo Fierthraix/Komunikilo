@@ -46,8 +46,8 @@ pub type Bit = bool;
 
 fn bool_to_u8(bools: &[bool]) -> u8 {
     let mut out: u8 = 0x0;
-    for i in 0..std::cmp::min(bools.len(), 8) {
-        if bools[i] {
+    for (i, &bool) in bools.iter().enumerate().take(std::cmp::min(bools.len(), 8)) {
+        if bool {
             out |= 1 << i
         }
     }
@@ -57,8 +57,8 @@ fn bool_to_u8(bools: &[bool]) -> u8 {
 fn u8_to_bools(data: u8) -> [bool; 8] {
     let mut out: [bool; 8] = [false; 8];
     let data: u8 = data;
-    for i in 0..8 {
-        out[i] = (data & (1 << i)) != 0
+    for (i, bool) in out.iter_mut().enumerate() {
+        *bool = (data & (1 << i)) != 0
     }
     out
 }
