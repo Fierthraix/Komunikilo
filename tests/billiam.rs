@@ -114,8 +114,15 @@ fn radiometer_pd_new() {
     // let ofdm_snrs: Vec<f64> = linspace(0.0245, 0.025, 250).collect();
     // let ofdm_snrs: Vec<f64> = linspace(0.0245, 1.1, 1000).collect();
     let ofdm_snrs: Vec<f64> = linspace(0.001, 0.035, 100).collect();
-    let ofdm_signal: Vec<f64> =
-        tx_ofdm_qpsk_signal(data.iter().cloned(), samp_rate, symbol_rate, carrier_freq).collect();
+    let ofdm_signal: Vec<f64> = tx_ofdm_qpsk_signal(
+        data.iter().cloned(),
+        64,
+        12,
+        samp_rate,
+        symbol_rate,
+        carrier_freq,
+    )
+    .collect();
     let ofdm_p_ds = get_pds(&ofdm_snrs, attempts * 10, nb, fs, &ofdm_signal);
     dot_plot!(ofdm_snrs, ofdm_p_ds, "/tmp/ofdm_covertness_radiometer.png");
 

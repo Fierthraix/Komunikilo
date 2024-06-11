@@ -13,6 +13,7 @@ mod util;
 #[test]
 fn ofdm_qpsk_plot() {
     let num_subcarriers = 64;
+    let num_pilots = 12;
 
     let samp_rate = 20_000_000;
 
@@ -27,8 +28,15 @@ fn ofdm_qpsk_plot() {
     let mut rng = rand::thread_rng();
     let data: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
-    let ofdm_signal: Vec<f64> =
-        tx_ofdm_qpsk_signal(data.iter().cloned(), samp_rate, symbol_rate, carrier_freq).collect();
+    let ofdm_signal: Vec<f64> = tx_ofdm_qpsk_signal(
+        data.iter().cloned(),
+        num_subcarriers,
+        num_pilots,
+        samp_rate,
+        symbol_rate,
+        carrier_freq,
+    )
+    .collect();
 
     let x: Vec<f64> = (0..ofdm_signal.len())
         .map(|idx| idx as f64 / samp_rate as f64)
@@ -61,11 +69,16 @@ fn py_version() -> PyResult<()> {
     let mut rng = rand::thread_rng();
     let data: Vec<Bit> = (0..num_bits).map(|_| rng.gen::<Bit>()).collect();
 
+    let scs = 64;
+    let pilots = 12;
+
     let tx_sig: Vec<Complex<f64>> =
-        tx_baseband_ofdm_signal(tx_baseband_qpsk_signal(data.iter().cloned())).collect();
+        tx_baseband_ofdm_signal(tx_baseband_qpsk_signal(data.iter().cloned()), scs, pilots)
+            .collect();
 
     let rx_dat: Vec<Bit> =
-        rx_baseband_qpsk_signal(rx_baseband_ofdm_signal(tx_sig.iter().cloned())).collect();
+        rx_baseband_qpsk_signal(rx_baseband_ofdm_signal(tx_sig.iter().cloned(), scs, pilots))
+            .collect();
 
     Python::with_gil(|py| {
         let pathlib = py.import_bound("pathlib")?;
