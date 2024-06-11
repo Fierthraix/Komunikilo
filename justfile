@@ -21,6 +21,10 @@ make:
 flamegraph arg:
 	poetry run python3 -m plop.collector -f flamegraph {{ arg }}
 
+install:
+	poetry install
+	@just make
+
 interactive *kargs:
 	poetry run python3 -i {{ kargs }}
 
