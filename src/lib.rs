@@ -1,9 +1,8 @@
 #![allow(unused_macros, dead_code)]
 use num_complex::Complex;
-use numpy::ndarray::Array2;
-use numpy::{IntoPyArray, PyArray1, PyArray2};
+use numpy::ndarray::{Array2, Axis};
+use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray2};
 use pyo3::prelude::*;
-use rand::rngs::ThreadRng;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use std::f64::consts::PI;
@@ -154,18 +153,6 @@ pub fn hamming_window(length: usize) -> Vec<f64> {
         .collect()
 }
 
-macro_rules! ber {
-    ($tx:expr, $rx:expr) => {
-        let len = std::cmp::min(tx, rx);
-        let total = tx
-            .iter()
-            .zip(rx.iter())
-            .map(|(ti, ri)| if t1 == r1 { 0 } else { 1 })
-            .sum();
-        (total as f64) / (len as f64)
-    };
-}
-
 #[inline]
 pub fn ber(tx: &[Bit], rx: &[Bit]) -> f64 {
     let len: usize = std::cmp::min(tx.len(), rx.len());
@@ -176,21 +163,6 @@ pub fn ber(tx: &[Bit], rx: &[Bit]) -> f64 {
         .sum();
     (errors as f64) / (len as f64)
 }
-
-/*
-pub fn ber<'a, I, T>(tx: I, rx: I) -> f64
-where
-    I: Iterator<Item = &'a T> + ExactSizeIterator,
-    T: Eq + 'a,
-{
-    let num_samples = tx.len();
-    let num_errors = tx
-        .zip(rx)
-        .enumerate()
-        .map(|(idx, (tx, rx))| if tx == rx { 1 } else { 0 })
-        .sum();
-}
-*/
 
 pub fn awgn_complex<I: Iterator<Item = Complex<f64>>>(
     signal: I,
@@ -213,28 +185,6 @@ pub fn awgn<I: Iterator<Item = f64>>(signal: I, sigma: f64) -> impl Iterator<Ite
                 .sample_iter(rand::thread_rng()),
         )
         .map(|(sample, noise)| sample + noise)
-}
-
-pub struct Awgn {
-    rng: ThreadRng,
-    dist: Normal<f64>,
-}
-
-impl Awgn {
-    pub fn new(sigma: f64) -> Self {
-        Self {
-            rng: rand::thread_rng(),
-            dist: Normal::new(0_f64, sigma).unwrap(),
-        }
-    }
-    pub fn awgn<'a, I: Iterator<Item = Complex<f64>> + 'a>(
-        &'a mut self,
-        signal: I,
-    ) -> impl Iterator<Item = Complex<f64>> + '_ {
-        signal
-            .zip(self.dist.sample_iter(&mut self.rng))
-            .map(|(sample, noise)| sample + noise)
-    }
 }
 
 #[inline]
@@ -309,14 +259,16 @@ mod tests {
 }
 
 #[pyfunction]
-fn max_cut_detector(signal: Vec<f64>) -> f64 {
+fn dcs_detector(signal: Vec<f64>) -> f64 {
     let np = 64;
     let n = 4096;
-    let sxf = ssca_base(signal, n, np);
+    let sx = ssca_base(signal, n, np);
 
-    let lambda = sxf
+    let top = sx.map(Complex::<f64>::norm_sqr).sum_axis(Axis(0));
+    let bot = sx.row(0).map(Complex::<f64>::norm_sqr);
+
+    let lambda = (top / bot)
         .into_iter()
-        .map(|s_i| s_i.norm_sqr())
         .max_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap();
 
@@ -324,38 +276,78 @@ fn max_cut_detector(signal: Vec<f64>) -> f64 {
 }
 
 #[pyfunction]
-#[pyo3(name = "ssca")]
+fn dcs_detector_sxf(sxf: PyReadonlyArray2<'_, Complex<f64>>) -> f64 {
+    let sx = sxf.as_array();
+
+    let top = sx.map(Complex::<f64>::norm_sqr).sum_axis(Axis(0));
+    let bot = sx.row(0).map(Complex::<f64>::norm_sqr);
+
+    let lambda = (top / bot)
+        .into_iter()
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+
+    10f64 * lambda.log10()
+}
+
+#[pyfunction]
+#[pyo3(signature=(signal, ssca=None))]
+fn max_cut_detector(signal: Vec<f64>, ssca: Option<PyReadonlyArray2<'_, Complex<f64>>>) -> f64 {
+    macro_rules! max_cut {
+        ($sxf:expr) => {
+            $sxf.iter()
+                .map(|&s_i| s_i.norm_sqr())
+                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap()
+        };
+    }
+
+    let np = 64;
+    let n = 4096;
+    let lambda: f64 = match ssca {
+        Some(sxf) => max_cut!(sxf.as_array()),
+        None => max_cut!(ssca_base(signal, n, np)),
+    };
+    10f64 * lambda.log10()
+}
+
+#[pyfunction]
+fn max_cut_detector_sxf(sxf: PyReadonlyArray2<'_, Complex<f64>>) -> f64 {
+    let lambda = sxf
+        .as_array()
+        .iter()
+        .map(|s_i| s_i.norm_sqr())
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+    10f64 * lambda.log10()
+}
+
+#[pyfunction]
+#[pyo3(name = "ssca", signature=(s, n=4096, np=64, map_output=false))]
 pub fn ssca_py(
     py: Python<'_>,
     s: Vec<f64>,
     n: usize,
     np: usize,
+    map_output: bool,
 ) -> Bound<'_, PyArray2<Complex<f64>>> {
     let sx = ssca_base(s, n, np);
-    sx.into_pyarray_bound(py)
-}
-
-#[pyfunction]
-pub fn ssca_mapped(
-    py: Python<'_>,
-    s: Vec<f64>,
-    n: usize,
-    np: usize,
-) -> Bound<'_, PyArray2<Complex<f64>>> {
-    let sx = ssca_base(s, n, np);
-
-    let mut sxf: Array2<Complex<f64>> = Array2::zeros((np + 1, 2 * n + 1));
-    for q_p in 0..n {
-        for k_p in 0..np {
-            let f: f64 = k_p as f64 / (2f64 * np as f64) - q_p as f64 / (2f64 * n as f64);
-            let a: f64 = k_p as f64 / np as f64 + q_p as f64 / n as f64;
-            let k: usize = (np as f64 * (f + 0.5)) as usize;
-            let q: usize = (n as f64 * a) as usize;
-            sxf[[k, q]] = sx[[q_p, k_p]];
+    if map_output {
+        let mut sxf: Array2<Complex<f64>> = Array2::zeros((np + 1, 2 * n + 1));
+        for q_p in 0..n {
+            for k_p in 0..np {
+                let f: f64 = k_p as f64 / (2f64 * np as f64) - q_p as f64 / (2f64 * n as f64);
+                let a: f64 = k_p as f64 / np as f64 + q_p as f64 / n as f64;
+                let k: usize = (np as f64 * (f + 0.5)) as usize;
+                let q: usize = (n as f64 * a) as usize;
+                sxf[[k, q]] = sx[[q_p, k_p]];
+            }
         }
-    }
 
-    sxf.into_pyarray_bound(py)
+        sxf.into_pyarray_bound(py)
+    } else {
+        sx.into_pyarray_bound(py)
+    }
 }
 
 #[pyfunction]
@@ -380,6 +372,15 @@ fn awgn_py(signal: Vec<f64>, sigma: f64) -> Vec<f64> {
                 .sample_iter(rand::thread_rng()),
         )
         .map(|(sample, noise)| sample + noise)
+        .collect()
+}
+
+#[pyfunction]
+fn pure_awgn(size: usize, sigma: f64) -> Vec<f64> {
+    Normal::new(0f64, sigma)
+        .unwrap()
+        .sample_iter(rand::thread_rng())
+        .take(size)
         .collect()
 }
 
@@ -412,11 +413,21 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[pyfunction]
     fn tx_ofdm(
         message: Vec<Bit>,
+        subcarriers: usize,
+        pilots: usize,
         sample_rate: usize,
         symbol_rate: usize,
         carrier_freq: f64,
     ) -> Vec<f64> {
-        tx_ofdm_qpsk_signal(message.into_iter(), sample_rate, symbol_rate, carrier_freq).collect()
+        tx_ofdm_qpsk_signal(
+            message.into_iter(),
+            subcarriers,
+            pilots,
+            sample_rate,
+            symbol_rate,
+            carrier_freq,
+        )
+        .collect()
     }
 
     /// Transmit a CDMA BPSK signal.
@@ -520,10 +531,13 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tx_fh_ofdm_dcsk, m)?)?;
     m.add_function(wrap_pyfunction!(random_data, m)?)?;
     m.add_function(wrap_pyfunction!(awgn_py, m)?)?;
+    m.add_function(wrap_pyfunction!(pure_awgn, m)?)?;
     m.add_function(wrap_pyfunction!(chirp, m)?)?;
     m.add_function(wrap_pyfunction!(energy_detector, m)?)?;
     m.add_function(wrap_pyfunction!(ssca_py, m)?)?;
-    m.add_function(wrap_pyfunction!(ssca_mapped, m)?)?;
     m.add_function(wrap_pyfunction!(max_cut_detector, m)?)?;
+    m.add_function(wrap_pyfunction!(max_cut_detector_sxf, m)?)?;
+    m.add_function(wrap_pyfunction!(dcs_detector, m)?)?;
+    m.add_function(wrap_pyfunction!(dcs_detector_sxf, m)?)?;
     Ok(())
 }
