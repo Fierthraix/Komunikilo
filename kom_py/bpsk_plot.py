@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from komunikilo import tx_bpsk
 
-import numpy as np
 import matplotlib.pyplot as plt
 from typing import List
 

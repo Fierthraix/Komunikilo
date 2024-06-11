@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-from dataclass import dataclass
-import numpy as np
-from math import cos, pi
-import matplotlib.pyplot as plt
 import random
 from typing import Any, Generator, Iterable, List, T
 
@@ -71,7 +67,8 @@ def tx_fh_dcsk(data: Iterable[bool], b: int = 8) -> Iterable[float]:
 
 
 def rx_fh_dcsk(data: Iterable[bool], b: int = 8) -> Iterable[float]:
-    rng = random.Random(RNG_SEED)
+    # rng = random.Random(RNG_SEED)
+    ...
 
 
 if __name__ == "__main__":
@@ -79,7 +76,7 @@ if __name__ == "__main__":
     data: List[bool] = [True if i % 2 == 0 else False for i in range(b)]
     assert _len(data) == b
 
-    result = fh_dcsk(data)
+    result = tx_fh_dcsk(data)
     assert _len(data) == _len(result) / b
     # assert _flatten(data) == _flatten(result)
     print(result)

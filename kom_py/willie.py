@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from psk import tx_bpsk, rx_bpsk, tx_baseband_bpsk, rx_baseband_bpsk
+from psk import tx_bpsk
 from typing import Iterable, List
 import matplotlib.pyplot as plt
 from random import choice, gauss
@@ -85,7 +85,7 @@ def test_1():
 
 if __name__ == "__main__":
     # data = [True, False, True, True, False, False, True, False]
-    NUM_BITS = 40 #_000
+    NUM_BITS = 40  # _000
     data = [choice((True, False)) for _ in range(NUM_BITS)]
     samp_rate = 441_00
     symb_rate = 450

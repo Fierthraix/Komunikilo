@@ -5,16 +5,13 @@ from cdma import tx_bpsk_cdma
 from util import timeit
 from ssca import (
     ssca as ssca_py,
-    plot_lambda,
-    plot_ssca_diamond,
+    # plot_ssca_diamond,
     plot_ssca_triangle,
     max_cut,
     dcs,
 )
-from komunikilo import ssca, ssca_mapped
+from komunikilo import ssca_mapped
 
-import numpy as np
-from multiprocessing import Pool
 import random
 from typing import List
 

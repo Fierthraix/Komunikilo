@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
-from collections import defaultdict
-from dataclasses import dataclass
-from math import ceil
 import numpy as np
-from typing import List, Literal, Tuple
+from typing import List
 
-from util import next_power_of_2, floor_power_of_2, timeit
+from util import timeit
 from willie import awgn
 
 
@@ -68,9 +65,7 @@ def ssca(s: List[float], N, Np, map_output=True) -> np.ndarray:
         return np.exp(-2j * np.pi * m * k / Np)
 
     # STEP 3:
-    em = np.array(
-        [[e(k, m) for k in range(-Np // 2, Np // 2)] for m in range(N)]
-    )
+    em = np.array([[e(k, m) for k in range(-Np // 2, Np // 2)] for m in range(N)])
 
     g = np.array([np.hamming(N) for _ in range(Np)]).transpose()
 
@@ -122,7 +117,6 @@ if __name__ == "__main__":
     from psk import tx_bpsk, tx_qpsk
     from cdma import tx_bpsk_cdma
     import random
-    from multiprocessing import Pool
 
     SAMPLE_RATE = 48_000
     SYMBOL_RATE = 1000
@@ -152,12 +146,13 @@ if __name__ == "__main__":
     # for sig in (awgn(np.zeros(len(bpsk)), N0), bpsk, bpsk_awgn, qpsk, qpsk_awgn):
     # for sig in (awgn(np.zeros(len(bpsk)), N0), bpsk, bpsk_awgn):
     signals = (awgn(np.zeros(len(bpsk)), N0), bpsk_awgn, cdma_bpsk_awgn)
+
     def do_signal(sig: List[float]):
         # Np = 256
         Np = 64
         # N = floor_power_of_2(len(sig) - Np)
         N = 4096
-        with timeit('SSCA') as _:
+        with timeit("SSCA") as _:
             sx = ssca(sig, N, Np)
             mc = max_cut(sx)
             dc = dcs(sx)
@@ -166,6 +161,7 @@ if __name__ == "__main__":
         plot_lambda(mc)
         plot_lambda(dc)
         import matplotlib.pyplot as plt
+
         plt.show()
 
     results = [do_signal(signal) for signal in signals]

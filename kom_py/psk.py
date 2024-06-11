@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-from typing import List, Iterable, Generator
-from math import pi
+from typing import List
 from util import bit_to_nrz, bitz_to_nrz, chunk
 import numpy as np
 
@@ -28,7 +27,9 @@ def tx_bpsk(
     data: List[bool], samp_rate: int, symb_rate: int, carrier_freq: float
 ) -> List[float]:
     samples_per_symbol = int(samp_rate / symb_rate)
-    assert samp_rate / 2 >= carrier_freq, f"SAMP RATE: {samp_rate} | FREQ: {carrier_freq}"
+    assert (
+        samp_rate / 2 >= carrier_freq
+    ), f"SAMP RATE: {samp_rate} | FREQ: {carrier_freq}"
     assert samp_rate % symb_rate == 0
 
     # Expand each bit in the time array:
@@ -71,7 +72,7 @@ def tx_qpsk(
     # Make time array
     # time = [i / samp_rate for i in range(len(symbols))]
     return [
-        (c_i * np.exp(1j * np.pi * carrier_freq * (i/samp_rate))).real
+        (c_i * np.exp(1j * np.pi * carrier_freq * (i / samp_rate))).real
         for (i, c_i) in enumerate(symbols)
     ]
 
@@ -84,17 +85,23 @@ def rx_qpsk(
     assert samp_rate % symb_rate == 0
     filter = [1 for _ in range(samples_per_symbol)]
 
-    ii = np.convolve([
-        s_i * np.cos(2 * np.pi * carrier_freq * (i / samp_rate))
-        for (i, s_i) in enumerate(signal)
-    ], filter)
+    ii = np.convolve(
+        [
+            s_i * np.cos(2 * np.pi * carrier_freq * (i / samp_rate))
+            for (i, s_i) in enumerate(signal)
+        ],
+        filter,
+    )
 
-    qi = np.convolve([
-        s_i * -np.sin(2 * np.pi * carrier_freq * (i / samp_rate))
-        for (i, s_i) in enumerate(signal)
-    ], filter)
+    qi = np.convolve(
+        [
+            s_i * -np.sin(2 * np.pi * carrier_freq * (i / samp_rate))
+            for (i, s_i) in enumerate(signal)
+        ],
+        filter,
+    )
 
     i_bits = [i > 0 for i in ii[::samples_per_symbol]][1:]
     q_bits = [i > 0 for i in qi[::samples_per_symbol]][1:]
 
-    return  list(np.array(list(zip(i_bits, q_bits))).flatten())
+    return list(np.array(list(zip(i_bits, q_bits))).flatten())

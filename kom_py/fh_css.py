@@ -2,7 +2,6 @@
 
 from komunikilo import tx_fh_css, random_data
 
-import numpy as np
 import matplotlib.pyplot as plt
 from typing import List
 
@@ -26,5 +25,5 @@ if __name__ == "__main__":
     # t = np.linspace(0, SYMBOL_RATE * NUM_BITS, len(signal))
     # plt.plot(t, signal)
 
-    plt.specgram(signal, Fs=SAMPLE_RATE)  #, Fc=(HIGH_FREQ-LOW_FREQ)/2)
+    plt.specgram(signal, Fs=SAMPLE_RATE)  # , Fc=(HIGH_FREQ-LOW_FREQ)/2)
     plt.show()

@@ -32,7 +32,6 @@ def rx_bpsk_cdma(
     signal: List[float], samp_rate: int, symb_rate: int, carrier_freq: float
 ) -> List[bool]:
     samples_per_symbol = int(samp_rate / symb_rate)
-    samples_per_chip = int(samples_per_symbol / len(KEY))
     assert samp_rate / 2 >= carrier_freq
     assert samp_rate / 2 >= len(KEY) * symb_rate
     assert samp_rate % symb_rate == 0
