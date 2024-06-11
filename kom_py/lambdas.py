@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from komunikilo import (
+    pure_awgn,
     awgn,
+    dcs_detector,
     energy_detector,
     max_cut_detector,
     random_data,
@@ -13,7 +15,7 @@ from komunikilo import (
     tx_dcsk,
     tx_fh_ofdm_dcsk,
 )
-from util import timeit, db, undb
+from util import db, undb
 from willie import avg_energy
 
 from dataclasses import dataclass, field
@@ -44,10 +46,25 @@ class Detector(Callable[[List[float]], float]): ...
 @dataclass
 class DetectorTestResults:
     detect_fn: Detector
-    snrs: List[float] = field(default_factory=lambda: [])
+    # snrs: List[float] = field(default_factory=lambda: [])
     h0s: List[List[float]] = field(default_factory=lambda: [])
     h1s: List[List[float]] = field(default_factory=lambda: [])
     lr: Optional[LogisticRegression] = None
+
+
+class ModulationTestResults:
+    name: str
+    tx_func: Tx
+    detectors: Dict[str, DetectorTestResults]
+
+    def __init__(self, name: str, tx_func: Tx):
+        self.name = name
+        self.tx_func = tx_func
+        self.detectors = {
+            "MaxCut": DetectorTestResults(detect_fn=max_cut_detector),
+            "DCS": DetectorTestResults(detect_fn=dcs_detector),
+            "Radiometer": DetectorTestResults(detect_fn=energy_detector),
+        }
 
 
 def __log_regress(
@@ -78,8 +95,14 @@ def __log_regress(
     # sort it by predicted probabilities
     # because thresholds[1:] = y_proba[::-1]
     df_test.sort_values(by="proba", inplace=True)
-    df_test["tpr"] = tpr[1:][::-1]
-    df_test["fpr"] = fpr[1:][::-1]
+    if len(tpr) == len(h0_λs):
+        df_test["tpr"] = tpr[::-1]
+    else:
+        df_test["tpr"] = tpr[1:][::-1]
+    if len(fpr) == len(h0_λs):
+        df_test["fpr"] = fpr[::-1]
+    else:
+        df_test["fpr"] = fpr[1:][::-1]
     df_test["youden_j"] = df_test.tpr - df_test.fpr
     if return_lr:
         return df_test, log_regression
@@ -115,7 +138,7 @@ def plot_auc_vs_snr(h0_λs: List[np.array], h1_λs: List[np.array], snrs: List[f
 
 
 def plot_youden_j_and_auc_vs_snr(lrs: List[pd.DataFrame], snrs: List[float]):
-    lambdas = [__best_threshold(lr) for lr in lrs]
+    # lambdas = [__best_threshold(lr) for lr in lrs]
     aucs = [__auc(lr) for lr in lrs]
     youden_js = [__youden_j(lr) for lr in lrs]
 
@@ -129,18 +152,18 @@ def plot_youden_j_and_auc_vs_snr(lrs: List[pd.DataFrame], snrs: List[float]):
 
 
 def plot_multi_youden_j_and_auc_vs_snr(
-    labels: List[str],
-    multi_lrs: List[List[pd.DataFrame]],
+    detector_results: Dict[str, DetectorTestResults],
     snrs: List[float],
     title: str = "",
 ):
-    aucs: List[List[float]] = [[__auc(lr) for lr in lrs] for lrs in multi_lrs]
-    youden_js: List[List[float]] = [[__youden_j(lr) for lr in lrs] for lrs in multi_lrs]
-
     fig, ax = plt.subplots(2, 1)
-    for y_j, auc, label in zip(youden_js, aucs, labels):
-        ax[0].plot(db(snrs), y_j, label=label)
-        ax[1].plot(db(snrs), auc, label=label)
+
+    for label, detector in detector_results.items():
+        aucs: List[float] = [__auc(lr) for lr in detector.lr]
+        y_js: List[float] = [__youden_j(lr) for lr in detector.lr]
+
+        ax[0].plot(db(snrs), y_js, label=label)
+        ax[1].plot(db(snrs), aucs, label=label)
     ax[0].set_xlabel("SNR (db)")
     ax[0].set_ylabel("Youden J")
     ax[0].legend(loc="best")
@@ -151,21 +174,16 @@ def plot_multi_youden_j_and_auc_vs_snr(
 
 
 def plot_youden_j_with_multiple_modulations(
-    modulation_test_results: Dict[str, List[Dict[str, DetectorTestResults]]],
+    modulation_test_results: List[ModulationTestResults],
     key: str,
 ):
-    # [{"MaxCut": DetectorTestResults.lr: pd.DataFrame}, "NRG": DetectorTestResults.lr: pd.DataFrame]
-    # aucs: List[List[float]] = [[__auc(lr) for lr in lrs] for lrs in multi_lrs]
-    youden_js: Dict[str, List[float]] = {
-        label: [__youden_j(lr) for lr in lrs[key].lr]
-        for label, lrs in modulation_test_results.items()
-    }
-
-    # fig, ax = plt.subplots(2, 1)
     fig, ax = plt.subplots()
-    for label, y_j in youden_js.items():
-        ax.plot(db(snrs), y_j, label=label)
+    # fig, ax = plt.subplots(2, 1)
+    for modulation in modulation_test_results:
+        youden_js: List[float] = [__youden_j(lr) for lr in modulation.detectors[key].lr]
+        ax.plot(db(snrs), youden_js, label=modulation.name)
         # ax[1].plot(db(snrs), auc, label=label)
+
     ax.set_xlabel("SNR (db)")
     ax.set_ylabel("Youden J")
     ax.legend(loc="best")
@@ -201,25 +219,19 @@ def __best_threshold(lr: pd.DataFrame) -> float:
     return cut_off.x
 
 
-def curry_lr(ht) -> pd.DataFrame:
-    h0_λs, h1_λs = ht
-    return __log_regress(h0_λs, h1_λs)
-
-
 def __run(
-    tx: Tx,
+    modulation: ModulationTestResults,
     snrs: List[float],
-    label="",
     num_attempts: int = 200,
     progress: Optional[tqdm] = None,
-) -> Dict[str, DetectorTestResults]:
+) -> ModulationTestResults:
     NUM_BITS: int = 120
 
     # Calculate Eb
-    signal: np.array = tx(random_data(NUM_BITS))
+    signal: np.array = modulation.tx_func(random_data(NUM_BITS))
     while len(signal) < 4096 + 64:
         NUM_BITS += 10
-        signal: np.array = tx(random_data(NUM_BITS))
+        signal: np.array = modulation.tx_func(random_data(NUM_BITS))
     logger.debug(f"NUM_BITS is {NUM_BITS}")
 
     eb: float = avg_energy(signal)
@@ -228,55 +240,51 @@ def __run(
     logger.debug("EB: {eb}")
     logger.debug("N0s: {list(n0s)}")
 
-    max_cut = DetectorTestResults(detect_fn=max_cut_detector, snrs=snrs)
-    nrg = DetectorTestResults(detect_fn=energy_detector, snrs=snrs)
-    # dcs_cut = DetectorTestResults
-
     if not progress:
         progress = tqdm(total=len(n0s))
 
     with multiprocessing.Pool(8) as p:
-        # for i, n0 in progress(enumerate(n0s), desc=label or "Detectors"):
         for i, n0 in enumerate(n0s):
             # Make the H0's
             logger.debug(f"N0: {n0}")
             signals: List[np.array] = [
-                awgn(tx(random_data(NUM_BITS)), n0) for _ in range(num_attempts)
+                awgn(modulation.tx_func(random_data(NUM_BITS)), n0)
+                for _ in range(num_attempts)
             ]
             noises: List[np.array] = [
-                awgn(np.zeros(len(signals[0])), n0) for _ in range(num_attempts)
+                pure_awgn(len(signals[0]), n0) for _ in range(num_attempts)
             ]
 
-            # Calculate all λs.
-            h0_λs: List[float] = p.map(max_cut.detect_fn, noises)
-            h1_λs: List[float] = p.map(max_cut.detect_fn, signals)
-            max_cut.h0s.append(h0_λs)
-            max_cut.h1s.append(h1_λs)
+            for detector in modulation.detectors.values():
+                # Calculate all λs.
+                h0_λs: List[float] = p.map(detector.detect_fn, noises)
+                h1_λs: List[float] = p.map(detector.detect_fn, signals)
+                detector.h0s.append(h0_λs)
+                detector.h1s.append(h1_λs)
 
-            h0_λs: List[float] = p.map(energy_detector, noises)
-            h1_λs: List[float] = p.map(energy_detector, signals)
-            nrg.h0s.append(h0_λs)
-            nrg.h1s.append(h1_λs)
+            # Update progress meter.
             progress.update(1)
 
-    with multiprocessing.Pool(8) as p, timeit("Logistic Regressions") as _:
-        lrs_max_cut: List[pd.DataFrame] = p.map(curry_lr, zip(max_cut.h0s, max_cut.h1s))
-        lrs_nrg: List[pd.DataFrame] = p.map(curry_lr, zip(nrg.h0s, nrg.h1s))
+        # Perform Logistic Regressions.
+        for detector in modulation.detectors.values():
+            lrs: List[pd.DataFrame] = p.starmap(
+                __log_regress, zip(detector.h0s, detector.h1s)
+            )
+            detector.lr = lrs
 
-    with timeit("Plots") as _:
-        plot_multi_roc_curve(lrs_max_cut)
-        plot_multi_roc_curve(lrs_nrg)
+        # Create plots.
+        for detector_name, detector in modulation.detectors.items():
+            plot_multi_roc_curve(
+                detector.lr, label=f"{modulation.name}: {detector_name}"
+            )
+
         plot_multi_youden_j_and_auc_vs_snr(
-            labels=["Energy Detector", "Max Cut"],
-            multi_lrs=[lrs_nrg, lrs_max_cut],
+            detector_results=modulation.detectors,
             snrs=snrs,
-            title=label,
+            title=modulation.name,
         )
 
-    max_cut.lr = lrs_max_cut
-    nrg.lr = lrs_nrg
-
-    return {"Radiometer": nrg, "MaxCut": max_cut}
+    return modulation
 
 
 if __name__ == "__main__":
@@ -285,7 +293,13 @@ if __name__ == "__main__":
     CARRIER_FREQ: float = 2000
 
     def ofdm_signal(data: List[bool]) -> np.array:
-        return tx_ofdm(data, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ)
+        subcarriers = 8
+        pilots = int(subcarriers * 0.8)
+        # subcarriers = 16
+        # pilots = 4
+        return tx_ofdm(
+            data, subcarriers, pilots, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ
+        )
 
     def bpsk_signal(data: List[bool]) -> np.array:
         return tx_bpsk(data, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ)
@@ -311,30 +325,36 @@ if __name__ == "__main__":
     def fh_ofdm_dcsk_signal(data: List[bool]) -> np.array:
         return tx_fh_ofdm_dcsk(data, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ)
 
-    harness: Dict[str, Callable] = {
-        "BFSK": bfsk_signal,
-        "BPSK": bpsk_signal,
-        "CDMA": cdma_signal,
-        "OFDM": ofdm_signal,
-        "FH-CSS": fh_css_signal,
-        "CSK": csk_signal,
-        "DCSK": dcsk_signal,
-        # "FH-OFDM-DCSK": fh_ofdm_dcsk_signal,
-    }
+    harness: List[ModulationTestResults] = [
+        ModulationTestResults(name="BFSK", tx_func=bfsk_signal),
+        # ModulationTestResults(name="BPSK", tx_func=bpsk_signal),
+        # ModulationTestResults(name="CDMA", tx_func=cdma_signal),
+        ModulationTestResults(name="OFDM", tx_func=ofdm_signal),
+        # ModulationTestResults(name="FH-CSS", tx_func=fh_css_signal),
+        # ModulationTestResults(name="CSK", tx_func=csk_signal),
+        # ModulationTestResults(name="DCSK", tx_func=dcsk_signal),
+        # ModulationTestResults(name="FH-OFDM-DCSK", tx_func=fh_ofdm_dcsk_signal),
+    ]
 
-    NUM_ATTEMPTS: int = 2000
-    # NUM_ATTEMPTS: int = 50
+    # NUM_ATTEMPTS: int = 2000
+    NUM_ATTEMPTS: int = 50
     # snrs: np.array = undb(np.linspace(-75, -3, 50))
     # snrs: np.array = undb(np.linspace(-75, 0, 150))
     # snrs: np.array = undb(np.linspace(-30, -3, 150))
-    snrs: np.array = undb(np.linspace(-20, -3, 100))
+    snrs: np.array = undb(np.linspace(-25, -6, 5))
     progress = tqdm(total=len(snrs) * len(harness))
-    results = {
-        key: __run(func, snrs, label=key, num_attempts=NUM_ATTEMPTS, progress=progress)
-        for key, func in harness.items()
-    }
+    results: List[ModulationTestResults] = [
+        __run(
+            modulation,
+            snrs,
+            num_attempts=NUM_ATTEMPTS,
+            progress=progress,
+        )
+        for modulation in harness
+    ]
 
     plot_youden_j_with_multiple_modulations(results, "MaxCut")
+    plot_youden_j_with_multiple_modulations(results, "DCS")
     plot_youden_j_with_multiple_modulations(results, "Radiometer")
 
     plt.show()
