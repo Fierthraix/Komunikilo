@@ -6,6 +6,7 @@ use rand::prelude::*;
 use rustfft::num_traits::Zero;
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
+use std::iter;
 
 const NUM_SUBCARRIERS: usize = 8;
 const CP_LEN: usize = NUM_SUBCARRIERS / 4;
@@ -26,16 +27,8 @@ pub fn tx_baseband_fh_ofdm_dcsk_signal<I: Iterator<Item = Bit>>(
         .wchunks(NUM_SUBCARRIERS - 1) // S/P
         .zip(Chebyshev::new(0.5).chunks(NUM_SUBCARRIERS))
         .flat_map(move |(bpsk_symbols, chaotic_sequence)| {
-            assert_eq!(
-                bpsk_symbols.len(),
-                NUM_SUBCARRIERS - 1,
-                "Must be a multiple of {}.",
-                NUM_SUBCARRIERS - 1
-            );
-            assert_eq!(chaotic_sequence.len(), NUM_SUBCARRIERS);
-            let pre_hop_symbols: Vec<Complex<f64>> = chaotic_sequence[0..1] // Take the first element of the sequence alone.
-                .iter()
-                .map(|&c_i| Complex::from(c_i))
+            let pre_hop_symbols: Vec<Complex<f64>> = iter::once(chaotic_sequence[0])
+                .map(Complex::from)
                 .chain(
                     // Multiply the data symbols by the remaining chaotic sequence chunk.
                     chaotic_sequence[1..]
@@ -158,7 +151,7 @@ pub fn tx_fh_ofdm_dcsk_signal_2<I: Iterator<Item = Bit>>(
 mod tests {
     use super::*;
     extern crate rand;
-    use crate::fh_ofdm_dcsk::{tests::rand::Rng};
+    use crate::fh_ofdm_dcsk::tests::rand::Rng;
 
     #[test]
     #[ignore] // TODO: FIXME: this test.
