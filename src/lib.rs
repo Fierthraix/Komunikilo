@@ -1,6 +1,6 @@
 #![allow(unused_macros, dead_code)]
 use num_complex::Complex;
-use numpy::ndarray::{Array2, Axis};
+use numpy::ndarray::Axis;
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray2};
 use pyo3::prelude::*;
 use rand::Rng;
@@ -29,7 +29,7 @@ pub mod ssca;
 mod util;
 mod willie;
 
-use crate::bpsk::{tx_baseband_bpsk_signal, tx_bpsk_signal};
+use crate::bpsk::{rx_bpsk_signal, tx_baseband_bpsk_signal, tx_bpsk_signal};
 use crate::cdma::tx_cdma_bpsk_signal;
 use crate::csk::tx_baseband_csk;
 use crate::dcsk::tx_baseband_dcsk;
@@ -39,7 +39,7 @@ use crate::fsk::tx_bfsk_signal;
 use crate::hadamard::HadamardMatrix;
 use crate::iter::Iter;
 use crate::ofdm::tx_ofdm_qpsk_signal;
-use crate::ssca::ssca_base;
+use crate::ssca::{ssca_base, ssca_mapped};
 
 pub type Bit = bool;
 
@@ -153,6 +153,17 @@ pub fn hamming_window(length: usize) -> Vec<f64> {
         .collect()
 }
 
+pub fn hamming_window_complex(length: usize) -> Vec<Complex<f64>> {
+    (0..length)
+        .map(|i| {
+            Complex::new(
+                0.54 - 0.46 * (2f64 * PI * i as f64 / length as f64).cos(),
+                0f64,
+            )
+        })
+        .collect()
+}
+
 #[inline]
 pub fn ber(tx: &[Bit], rx: &[Bit]) -> f64 {
     let len: usize = std::cmp::min(tx.len(), rx.len());
@@ -190,6 +201,12 @@ pub fn awgn<I: Iterator<Item = f64>>(signal: I, sigma: f64) -> impl Iterator<Ite
 #[inline]
 /// Calculates the energy per sample.
 pub fn avg_energy(signal: &[f64]) -> f64 {
+    signal.iter().map(|&sample| sample.powi(2)).sum::<f64>() / signal.len() as f64
+}
+
+#[pyfunction]
+#[pyo3(name = "avg_energy")]
+pub fn avg_energy_py(signal: Vec<f64>) -> f64 {
     signal.iter().map(|&sample| sample.powi(2)).sum::<f64>() / signal.len() as f64
 }
 
@@ -291,23 +308,15 @@ fn dcs_detector_sxf(sxf: PyReadonlyArray2<'_, Complex<f64>>) -> f64 {
 }
 
 #[pyfunction]
-#[pyo3(signature=(signal, ssca=None))]
-fn max_cut_detector(signal: Vec<f64>, ssca: Option<PyReadonlyArray2<'_, Complex<f64>>>) -> f64 {
-    macro_rules! max_cut {
-        ($sxf:expr) => {
-            $sxf.iter()
-                .map(|&s_i| s_i.norm_sqr())
-                .max_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap()
-        };
-    }
-
+fn max_cut_detector(signal: Vec<f64>) -> f64 {
     let np = 64;
     let n = 4096;
-    let lambda: f64 = match ssca {
-        Some(sxf) => max_cut!(sxf.as_array()),
-        None => max_cut!(ssca_base(signal, n, np)),
-    };
+    let lambda: f64 = ssca_base(signal, n, np)
+        .iter()
+        .map(|&s_i| s_i.norm_sqr())
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+
     10f64 * lambda.log10()
 }
 
@@ -331,22 +340,10 @@ pub fn ssca_py(
     np: usize,
     map_output: bool,
 ) -> Bound<'_, PyArray2<Complex<f64>>> {
-    let sx = ssca_base(s, n, np);
     if map_output {
-        let mut sxf: Array2<Complex<f64>> = Array2::zeros((np + 1, 2 * n + 1));
-        for q_p in 0..n {
-            for k_p in 0..np {
-                let f: f64 = k_p as f64 / (2f64 * np as f64) - q_p as f64 / (2f64 * n as f64);
-                let a: f64 = k_p as f64 / np as f64 + q_p as f64 / n as f64;
-                let k: usize = (np as f64 * (f + 0.5)) as usize;
-                let q: usize = (n as f64 * a) as usize;
-                sxf[[k, q]] = sx[[q_p, k_p]];
-            }
-        }
-
-        sxf.into_pyarray_bound(py)
+        ssca_mapped(s, n, np).into_pyarray_bound(py)
     } else {
-        sx.into_pyarray_bound(py)
+        ssca_base(s, n, np).into_pyarray_bound(py)
     }
 }
 
@@ -407,6 +404,16 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
         carrier_freq: f64,
     ) -> Vec<f64> {
         tx_bpsk_signal(message.into_iter(), sample_rate, symbol_rate, carrier_freq).collect()
+    }
+
+    #[pyfunction]
+    fn rx_bpsk(
+        signal: Vec<f64>,
+        sample_rate: usize,
+        symbol_rate: usize,
+        carrier_freq: f64,
+    ) -> Vec<Bit> {
+        rx_bpsk_signal(signal.into_iter(), sample_rate, symbol_rate, carrier_freq).collect()
     }
 
     /// Transmit an OFDM QPSK signal.
@@ -522,6 +529,7 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(tx_baseband_bpsk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_bpsk, m)?)?;
+    m.add_function(wrap_pyfunction!(rx_bpsk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_cdma_bpsk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_ofdm, m)?)?;
     m.add_function(wrap_pyfunction!(tx_csk, m)?)?;
@@ -534,6 +542,7 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(pure_awgn, m)?)?;
     m.add_function(wrap_pyfunction!(chirp, m)?)?;
     m.add_function(wrap_pyfunction!(energy_detector, m)?)?;
+    m.add_function(wrap_pyfunction!(avg_energy_py, m)?)?;
     m.add_function(wrap_pyfunction!(ssca_py, m)?)?;
     m.add_function(wrap_pyfunction!(max_cut_detector, m)?)?;
     m.add_function(wrap_pyfunction!(max_cut_detector_sxf, m)?)?;
