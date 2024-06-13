@@ -207,7 +207,7 @@ pub fn fit_erfc(x: &[f64], y: &[f64]) -> (f64, f64, f64, f64) {
 pub fn save_vector(v: &[f64], filename: &str) -> Result<(), std::io::Error> {
     let mut w = csv::Writer::from_writer(std::fs::File::create(filename)?);
 
-    w.write_record(&["v (V)"])?;
+    w.write_record(["v (V)"])?;
 
     for i in v {
         w.write_record(&[i.to_string()])?;
@@ -219,7 +219,7 @@ pub fn save_vector(v: &[f64], filename: &str) -> Result<(), std::io::Error> {
 pub fn save_vector2(v: &[f64], t: &[f64], filename: &str) -> Result<(), std::io::Error> {
     let mut w = csv::Writer::from_writer(std::fs::File::create(filename)?);
 
-    w.write_record(&["t (s)", "v (V)"])?;
+    w.write_record(["t (s)", "v (V)"])?;
 
     for (v_i, t_i) in v.iter().zip(t.iter()) {
         w.write_record(&[t_i.to_string(), v_i.to_string()])?;

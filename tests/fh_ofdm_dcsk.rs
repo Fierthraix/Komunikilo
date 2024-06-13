@@ -68,7 +68,7 @@ fn python_plotz() -> PyResult<()> {
         samp_rate,
         symbol_rate,
         carrier_freq,
-        &key,
+        key,
     )
     .collect();
 

@@ -60,5 +60,5 @@ fn check_ebs() {
     println!("BPSKCDMA  {:.2}", cdma_bpsk_eb);
     println!("QPSK:     {:.2}", qpsk_eb);
     println!("QPSKCDMA  {:.2}", cdma_qpsk_eb);
-    assert!(false);
+    // assert!(false);
 }

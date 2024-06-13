@@ -56,7 +56,6 @@ fn cdma_graphs() {
     .collect();
 
     let t: Vec<f64> = (0..tx.len())
-        .into_iter()
         .map(|idx| {
             let time_step = symbol_rate as f64 / samp_rate as f64;
             idx as f64 * time_step
@@ -66,7 +65,6 @@ fn cdma_graphs() {
     let bpsk_tx: Vec<f64> =
         tx_bpsk_signal(data.iter().cloned(), samp_rate, symbol_rate, carrier_freq).collect();
     let t2: Vec<f64> = (0..bpsk_tx.len())
-        .into_iter()
         .map(|idx| {
             let time_step = symbol_rate as f64 / samp_rate as f64;
             idx as f64 * time_step
@@ -131,7 +129,7 @@ fn python_plotz() -> PyResult<()> {
         samp_rate,
         symbol_rate,
         carrier_freq,
-        &key,
+        key,
     )
     .collect();
 
@@ -215,13 +213,13 @@ fn mai_plot() {
                 .iter()
                 .take(user_count + 1)
                 .zip(keys.iter())
-                .map(|(&ref data, &ref key)| {
+                .map(|(data, key)| {
                     tx_cdma_bpsk_signal(
                         data.iter().cloned(),
                         samp_rate,
                         symbol_rate,
                         carrier_freq,
-                        &key,
+                        key,
                     )
                 })
                 .fold(vec![0f64; num_samples], |mut acc, tx| {

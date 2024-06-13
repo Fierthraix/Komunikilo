@@ -372,13 +372,13 @@ mod tests {
         let channel: Vec<f64> = datas
             .iter()
             .zip(keys.iter())
-            .map(|(&ref data, &ref key)| {
+            .map(|(data, key)| {
                 tx_cdma_bpsk_signal(
                     data.iter().cloned(),
                     samp_rate,
                     symbol_rate,
                     carrier_freq,
-                    &key,
+                    key,
                 )
             })
             .fold(vec![0f64; num_samples], |mut acc, tx| {
@@ -444,13 +444,13 @@ mod tests {
         let channel: Vec<f64> = datas
             .iter()
             .zip(keys.iter())
-            .map(|(&ref data, &ref key)| {
+            .map(|(data, key)| {
                 tx_coded_cdma_bpsk_signal(
                     data.iter().cloned(),
                     samp_rate,
                     symbol_rate,
                     carrier_freq,
-                    &key,
+                    key,
                 )
             })
             .fold(vec![0f64; num_samples], |mut acc, tx| {

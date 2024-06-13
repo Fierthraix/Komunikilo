@@ -50,7 +50,7 @@ fn baseband_bpsk_works() {
     let y: Vec<f64> = x
         .par_iter()
         .map(|&i| {
-            let sigma = (1f64 / (2f64 * i as f64)).sqrt();
+            let sigma: f64 = (1f64 / (2f64 * i)).sqrt();
             let noisy_signal = awgn_complex(bpsk_tx.iter().cloned(), sigma);
             let rx = rx_baseband_bpsk_signal(noisy_signal);
 
@@ -89,8 +89,7 @@ fn baseband_qpsk_works() {
     let y: Vec<f64> = x
         .par_iter()
         .map(|&i| {
-            let sigma = (1f64 / (i as f64)).sqrt();
-            // let noisy_signal = awgn_complex(qpsk_tx.iter().cloned(), sigma);
+            let sigma = (1f64 / i).sqrt();
             let noisy_signal = awgn_complex(qpsk_tx.iter().cloned(), sigma);
             let rx = rx_baseband_qpsk_signal(noisy_signal);
 
@@ -116,7 +115,7 @@ fn bpsk_works() {
     let samp_rate = 44100; // Clock rate for both RX and TX.
     let symbol_rate = 900; // Rate symbols come out the things.
     let carrier_freq = 1800_f64;
-    let n_scale = samp_rate as f64 / carrier_freq as f64;
+    let n_scale = samp_rate as f64 / carrier_freq;
 
     // Test data.
     let mut rng = rand::thread_rng();
@@ -139,17 +138,15 @@ fn bpsk_works() {
     // Container for the Eb/N0.
     let y: Vec<f64> = x
         .par_iter()
-        // .iter()
         .map(|&i| {
-            let sigma = not_inf((1f64 / (2f64 * i)).sqrt());
+            let sigma = not_inf((n_scale / (2f64 * i)).sqrt());
             let awgn_noise = Normal::new(0f64, sigma).unwrap();
 
-            let konst = n_scale.sqrt();
             let noisy_signal = bpsk_tx
                 .iter()
                 .cloned()
                 .zip(awgn_noise.sample_iter(rand::thread_rng()))
-                .map(|(symb, noise)| symb + noise * konst);
+                .map(|(symb, noise)| symb + noise);
 
             let rx = rx_bpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq);
 
@@ -172,7 +169,7 @@ fn qpsk_works() {
     let samp_rate = 44100; // Clock rate for both RX and TX.
     let symbol_rate = 800; // Rate symbols come out the things.
     let carrier_freq = 2000f64;
-    let n_scale = samp_rate as f64 / carrier_freq as f64;
+    let n_scale = samp_rate as f64 / carrier_freq;
 
     // Test data.
     let mut rng = rand::thread_rng();
@@ -228,7 +225,7 @@ fn cdma_works() {
     let samp_rate = 80_000; // Clock rate for both RX and TX.
     let symbol_rate = 1000; // Rate symbols come out the things.
     let carrier_freq = 2500f64;
-    let n_scale = samp_rate as f64 / carrier_freq as f64;
+    let n_scale = samp_rate as f64 / carrier_freq;
 
     // Test data.
     let mut rng = rand::thread_rng();
@@ -283,7 +280,7 @@ fn cdma_works() {
 #[ignore]
 fn all_method_ber() -> PyResult<()> {
     // Simulation parameters.
-    let num_bits = 4000; //100_000; //1_000_000; //4000; // How many bits to transmit overall.
+    let num_bits = 40000; //100_000; //1_000_000; //4000; // How many bits to transmit overall.
     let samp_rate = 128_000; // Clock rate for both RX and TX.
     let symbol_rate = 1000; // Rate symbols come out the things.
     let carrier_freq = 2500f64;
@@ -298,6 +295,14 @@ fn all_method_ber() -> PyResult<()> {
     let xmin = f64::MIN_POSITIVE;
     let xmax = 15f64;
     let x: Vec<f64> = linspace(xmin, xmax, 50).collect();
+
+    // let fc_sr = carrier_freq / symbol_rate as f64;
+    // let sigmas: Vec<f64> = x.iter().map(|s| fc_sr / (s).sqrt()).collect();
+    let fs_fc = samp_rate as f64 / carrier_freq;
+    let sigmas: Vec<f64> = x
+        .iter()
+        .map(|s| not_inf((fs_fc / (2f64 * s)).sqrt()))
+        .collect();
 
     // Tx output.
     let fsk_tx: Vec<f64> = tx_fsk(
@@ -330,20 +335,16 @@ fn all_method_ber() -> PyResult<()> {
     )
     .collect();
 
-    let n_scale = samp_rate as f64 / carrier_freq as f64;
-    let konst = n_scale.sqrt();
-
     // Container for the Eb/N0.
-    let bpsk_bers: Vec<f64> = x
+    let bpsk_bers: Vec<f64> = sigmas
         .par_iter()
-        .map(|&i| {
-            let sigma = (1f64 / (2f64 * i)).sqrt();
+        .map(|&sigma| {
             let normal = Normal::new(0f64, sigma).unwrap();
             let noisy_signal = bpsk_tx
                 .iter()
                 .cloned()
                 .zip(normal.sample_iter(rand::thread_rng()))
-                .map(|(symb, noise)| symb + noise * konst);
+                .map(|(symb, noise)| symb + noise);
             let rx = rx_bpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq);
 
             rx.zip(data_bits.iter())
@@ -353,16 +354,15 @@ fn all_method_ber() -> PyResult<()> {
         })
         .collect();
 
-    let qpsk_bers: Vec<f64> = x
+    let qpsk_bers: Vec<f64> = sigmas
         .par_iter()
-        .map(|&i| {
-            let sigma = (1f64 / (2f64 * i)).sqrt();
+        .map(|&sigma| {
             let normal = Normal::new(0f64, sigma).unwrap();
             let noisy_signal = qpsk_tx
                 .iter()
                 .cloned()
                 .zip(normal.sample_iter(rand::thread_rng()))
-                .map(|(symb, noise)| symb + noise * konst);
+                .map(|(symb, noise)| symb + noise);
             let rx = rx_qpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq);
 
             rx.zip(data_bits.iter())
@@ -372,16 +372,15 @@ fn all_method_ber() -> PyResult<()> {
         })
         .collect();
 
-    let cdma_bers: Vec<f64> = x
+    let cdma_bers: Vec<f64> = sigmas
         .par_iter()
-        .map(|&i| {
-            let sigma = (1f64 / (2f64 * i)).sqrt();
+        .map(|&sigma| {
             let normal = Normal::new(0f64, sigma).unwrap();
             let noisy_signal = cdma_tx
                 .iter()
                 .cloned()
                 .zip(normal.sample_iter(rand::thread_rng()))
-                .map(|(symb, noise)| symb + noise * konst);
+                .map(|(symb, noise)| symb + noise);
             let rx = rx_cdma_bpsk_signal(noisy_signal, samp_rate, symbol_rate, carrier_freq, key);
 
             rx.zip(data_bits.iter())
@@ -420,6 +419,7 @@ fn all_method_ber() -> PyResult<()> {
             "axes.plot(x, qpsk_bers, label='QPSK: (2.5kHz, 1kHz Data Rate)')",
             "axes.plot(x, cdma_bers, label='CDMA: 64kHz Chip Rate')",
             "axes.plot(x, theory_bers, label='1/2 erfc(sqrt(Eb/N0))')",
+            "axes.set_yscale('log')",
             // "axes.set_ylim(ymin=0, ymax=0.5)",
             // "axes.set_yscale('log')",
             "axes.legend()",

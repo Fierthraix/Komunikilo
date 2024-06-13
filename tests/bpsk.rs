@@ -38,7 +38,6 @@ fn bpsk_graphs() {
     .collect();
 
     let t: Vec<f64> = (0..tx.len())
-        .into_iter()
         .map(|idx| {
             let time_step = symbol_rate as f64 / samp_rate as f64;
             idx as f64 * time_step

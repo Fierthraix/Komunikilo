@@ -20,7 +20,7 @@ fn qpsk_graphs() {
     .inflate(2)
     .collect();
 
-    let samp_rate = 44_100_00;
+    let samp_rate = 4_410_000;
     let fc = 2000_f64;
     let symb_rate = 900;
 
@@ -115,9 +115,7 @@ fn qpsk_graphs() {
         .enumerate()
         .map(move |(idx, sample)| {
             let time = idx as f64 / samp_rate as f64;
-            let ii = sample * (2_f64 * PI * fc * time).cos();
-            // let qi = sample * -(2_f64 * PI * fc * time).sin();
-            ii
+            sample * (2_f64 * PI * fc * time).cos()
         })
         .integrate_and_dump(samples_per_symbol)
         .collect();
@@ -128,8 +126,7 @@ fn qpsk_graphs() {
         .map(move |(idx, sample)| {
             let time = idx as f64 / samp_rate as f64;
             // let ii = sample * (2_f64 * PI * fc * time).cos();
-            let qi = sample * -(2_f64 * PI * fc * time).sin();
-            qi
+            sample * -(2_f64 * PI * fc * time).sin()
         })
         .integrate_and_dump(samples_per_symbol)
         .collect();
