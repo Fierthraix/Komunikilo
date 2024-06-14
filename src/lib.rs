@@ -1,11 +1,13 @@
 #![allow(unused_macros, dead_code)]
+use std::f64::consts::PI;
+
 use num_complex::Complex;
 use numpy::ndarray::Axis;
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray2};
 use pyo3::prelude::*;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
-use std::f64::consts::PI;
+use smallvec::SmallVec;
 
 mod bch;
 pub mod bpf;
@@ -118,6 +120,17 @@ fn fftshift<T: Clone>(x: &[T]) -> Vec<T> {
     v.extend_from_slice(&x[pivot..]);
     v.extend_from_slice(&x[..pivot]);
     v
+}
+
+fn fftshift_mut<T: Copy>(x: &mut [T]) {
+    let pivot = x.len().div_ceil(2);
+    let v: Vec<T> = Vec::from(&x[..pivot]);
+    for (i, j) in (pivot..x.len()).enumerate() {
+        x[i] = x[j];
+    }
+    for (i, item) in (0..pivot).zip(v.into_iter()) {
+        x[i] = item;
+    }
 }
 
 #[inline]
