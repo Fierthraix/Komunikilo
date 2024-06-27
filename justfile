@@ -23,6 +23,7 @@ flamegraph arg:
 
 install:
 	poetry install
+	cargo install maturin
 	@just make
 
 interactive *kargs:
