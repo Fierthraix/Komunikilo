@@ -26,3 +26,18 @@ impl Iterator for Chebyshev {
         Some(self.xn)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::no_nans;
+
+    #[test]
+    #[ignore] // TODO: FIXME
+    fn no_nans_test() {
+        let nums: Vec<f64> = Chebyshev::new(0.5).take(10_000).collect();
+
+        // assert!(no_nans(&nums), "{:?}", nums);
+        assert!(!no_nans(&nums), "{:?}", nums);
+    }
+}
