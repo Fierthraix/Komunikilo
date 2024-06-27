@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 from komunikilo import (
+    avg_energy,
     pure_awgn,
     awgn,
-    dcs_detector,
+    # dcs_detector,
     energy_detector,
     max_cut_detector,
     random_data,
@@ -16,9 +17,9 @@ from komunikilo import (
     tx_fh_ofdm_dcsk,
 )
 from util import db, undb
-from willie import avg_energy
 
 from dataclasses import dataclass, field
+from functools import partial
 import itertools
 import logging
 import numpy as np
@@ -31,7 +32,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
 from tqdm import tqdm
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", logging.INFO))
 logger = logging.getLogger(__name__)
@@ -45,26 +46,30 @@ class Detector(Callable[[List[float]], float]): ...
 
 @dataclass
 class DetectorTestResults:
+    name: str
     detect_fn: Detector
-    # snrs: List[float] = field(default_factory=lambda: [])
     h0s: List[List[float]] = field(default_factory=lambda: [])
     h1s: List[List[float]] = field(default_factory=lambda: [])
     lr: Optional[LogisticRegression] = None
 
 
+def _detectors() -> List[DetectorTestResults]:
+    return [
+        DetectorTestResults(name="MaxCut", detect_fn=max_cut_detector),
+        # DetectorTestResults(name="DCS", detect_fn=dcs_detector),
+        DetectorTestResults(name="Radiometer", detect_fn=energy_detector),
+    ]
+
+
 class ModulationTestResults:
     name: str
     tx_func: Tx
-    detectors: Dict[str, DetectorTestResults]
+    detectors: List[DetectorTestResults]
 
     def __init__(self, name: str, tx_func: Tx):
         self.name = name
         self.tx_func = tx_func
-        self.detectors = {
-            "MaxCut": DetectorTestResults(detect_fn=max_cut_detector),
-            "DCS": DetectorTestResults(detect_fn=dcs_detector),
-            "Radiometer": DetectorTestResults(detect_fn=energy_detector),
-        }
+        self.detectors = _detectors()
 
 
 def __log_regress(
@@ -120,7 +125,7 @@ def __youden_j(lr: pd.DataFrame) -> float:
 
 def plot_multi_roc_curve(lrs: List[pd.DataFrame], label=""):
     fig, ax = plt.subplots()
-    for lr in lrs:  # [lrs[5]]: #, lrs[-5]):
+    for lr in lrs:
         metrics.RocCurveDisplay(fpr=lr.fpr, tpr=lr.tpr).plot(ax=ax)
     ax.set_ylabel("True Positive Rate")
     ax.set_xlabel("False Positive Rate")
@@ -152,18 +157,18 @@ def plot_youden_j_and_auc_vs_snr(lrs: List[pd.DataFrame], snrs: List[float]):
 
 
 def plot_multi_youden_j_and_auc_vs_snr(
-    detector_results: Dict[str, DetectorTestResults],
+    detector_results: List[DetectorTestResults],
     snrs: List[float],
     title: str = "",
 ):
     fig, ax = plt.subplots(2, 1)
 
-    for label, detector in detector_results.items():
+    for detector in detector_results:
         aucs: List[float] = [__auc(lr) for lr in detector.lr]
         y_js: List[float] = [__youden_j(lr) for lr in detector.lr]
 
-        ax[0].plot(db(snrs), y_js, label=label)
-        ax[1].plot(db(snrs), aucs, label=label)
+        ax[0].plot(db(snrs), y_js, label=detector.name)
+        ax[1].plot(db(snrs), aucs, label=detector.name)
     ax[0].set_xlabel("SNR (db)")
     ax[0].set_ylabel("Youden J")
     ax[0].legend(loc="best")
@@ -178,18 +183,14 @@ def plot_youden_j_with_multiple_modulations(
     key: str,
 ):
     fig, ax = plt.subplots()
-    # fig, ax = plt.subplots(2, 1)
     for modulation in modulation_test_results:
-        youden_js: List[float] = [__youden_j(lr) for lr in modulation.detectors[key].lr]
+        detector = next(d for d in modulation.detectors if d.name == key)
+        youden_js: List[float] = [__youden_j(lr) for lr in detector.lr]
         ax.plot(db(snrs), youden_js, label=modulation.name)
-        # ax[1].plot(db(snrs), auc, label=label)
 
     ax.set_xlabel("SNR (db)")
     ax.set_ylabel("Youden J")
     ax.legend(loc="best")
-    # ax[1].set_xlabel("SNR (db)")
-    # ax[1].set_ylabel("AUC")
-    # ax[1].legend(loc="best")
     fig.suptitle(key)
 
 
@@ -255,7 +256,7 @@ def __run(
                 pure_awgn(len(signals[0]), n0) for _ in range(num_attempts)
             ]
 
-            for detector in modulation.detectors.values():
+            for detector in modulation.detectors:
                 # Calculate all λs.
                 h0_λs: List[float] = p.map(detector.detect_fn, noises)
                 h1_λs: List[float] = p.map(detector.detect_fn, signals)
@@ -266,16 +267,16 @@ def __run(
             progress.update(1)
 
         # Perform Logistic Regressions.
-        for detector in modulation.detectors.values():
+        for detector in modulation.detectors:
             lrs: List[pd.DataFrame] = p.starmap(
                 __log_regress, zip(detector.h0s, detector.h1s)
             )
             detector.lr = lrs
 
         # Create plots.
-        for detector_name, detector in modulation.detectors.items():
+        for detector in modulation.detectors:
             plot_multi_roc_curve(
-                detector.lr, label=f"{modulation.name}: {detector_name}"
+                detector.lr, label=f"{modulation.name}: {detector.name}"
             )
 
         plot_multi_youden_j_and_auc_vs_snr(
@@ -287,61 +288,70 @@ def __run(
     return modulation
 
 
+SAMPLE_RATE: float = 2**16  # 65536
+SYMBOL_RATE: float = 2**8  # 256
+CARRIER_FREQ: float = 2000
+
+bpsk_signal = partial(
+    tx_bpsk, sample_rate=SAMPLE_RATE, symbol_rate=SYMBOL_RATE, carrier_freq=CARRIER_FREQ
+)
+cdma_signal = partial(
+    tx_cdma_bpsk,
+    sample_rate=SAMPLE_RATE,
+    symbol_rate=SYMBOL_RATE,
+    carrier_freq=CARRIER_FREQ,
+)
+bfsk_signal = partial(
+    tx_bfsk,
+    sample_rate=SAMPLE_RATE,
+    symbol_rate=SYMBOL_RATE,
+    freq_low=CARRIER_FREQ * 0.8,
+    freq_high=CARRIER_FREQ,
+)
+csk_signal = partial(tx_csk, sample_rate=SAMPLE_RATE, symbol_rate=SYMBOL_RATE)
+dcsk_signal = partial(tx_dcsk, sample_rate=SAMPLE_RATE, symbol_rate=SYMBOL_RATE)
+fh_css_signal = partial(
+    tx_fh_css,
+    sample_rate=SAMPLE_RATE,
+    symbol_rate=SYMBOL_RATE,
+    freq_low=2e3,
+    freq_high=1e4,
+    num_freqs=8,
+)
+fh_ofdm_dcsk_signal = partial(
+    tx_fh_ofdm_dcsk,
+    sample_rate=SAMPLE_RATE,
+    symbol_rate=SYMBOL_RATE,
+    carrier_freq=CARRIER_FREQ,
+)
+
+
+def ofdm_signal(data: List[bool]) -> np.array:
+    subcarriers = 8
+    pilots = int(subcarriers * 0.8)
+    # subcarriers = 16
+    # pilots = 4
+    return tx_ofdm(data, subcarriers, pilots, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ)
+
+
+harness: List[ModulationTestResults] = [
+    ModulationTestResults(name="BFSK", tx_func=bfsk_signal),
+    ModulationTestResults(name="BPSK", tx_func=bpsk_signal),
+    ModulationTestResults(name="CDMA", tx_func=cdma_signal),
+    ModulationTestResults(name="OFDM", tx_func=ofdm_signal),
+    ModulationTestResults(name="FH-CSS", tx_func=fh_css_signal),
+    ModulationTestResults(name="CSK", tx_func=csk_signal),
+    ModulationTestResults(name="DCSK", tx_func=dcsk_signal),
+    ModulationTestResults(name="FH-OFDM-DCSK", tx_func=fh_ofdm_dcsk_signal),
+]
+
+
 if __name__ == "__main__":
-    SAMPLE_RATE: float = 2**16  # 65536
-    SYMBOL_RATE: float = 2**8  # 256
-    CARRIER_FREQ: float = 2000
-
-    def ofdm_signal(data: List[bool]) -> np.array:
-        subcarriers = 8
-        pilots = int(subcarriers * 0.8)
-        # subcarriers = 16
-        # pilots = 4
-        return tx_ofdm(
-            data, subcarriers, pilots, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ
-        )
-
-    def bpsk_signal(data: List[bool]) -> np.array:
-        return tx_bpsk(data, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ)
-
-    def cdma_signal(data: List[bool]) -> np.array:
-        return tx_cdma_bpsk(data, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ)
-
-    def bfsk_signal(data: List[bool]) -> np.array:
-        return tx_bfsk(data, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ * 0.8, CARRIER_FREQ)
-
-    def fh_css_signal(data: List[bool]) -> np.array:
-        f_low = 2e3
-        f_high = 1e4
-        num_freqs = 8
-        return tx_fh_css(data, SAMPLE_RATE, SYMBOL_RATE, f_low, f_high, num_freqs)
-
-    def csk_signal(data: List[bool]) -> np.array:
-        return tx_csk(data, SAMPLE_RATE, SYMBOL_RATE)
-
-    def dcsk_signal(data: List[bool]) -> np.array:
-        return tx_dcsk(data, SAMPLE_RATE, SYMBOL_RATE)
-
-    def fh_ofdm_dcsk_signal(data: List[bool]) -> np.array:
-        return tx_fh_ofdm_dcsk(data, SAMPLE_RATE, SYMBOL_RATE, CARRIER_FREQ)
-
-    harness: List[ModulationTestResults] = [
-        ModulationTestResults(name="BFSK", tx_func=bfsk_signal),
-        # ModulationTestResults(name="BPSK", tx_func=bpsk_signal),
-        # ModulationTestResults(name="CDMA", tx_func=cdma_signal),
-        ModulationTestResults(name="OFDM", tx_func=ofdm_signal),
-        # ModulationTestResults(name="FH-CSS", tx_func=fh_css_signal),
-        # ModulationTestResults(name="CSK", tx_func=csk_signal),
-        # ModulationTestResults(name="DCSK", tx_func=dcsk_signal),
-        # ModulationTestResults(name="FH-OFDM-DCSK", tx_func=fh_ofdm_dcsk_signal),
-    ]
 
     # NUM_ATTEMPTS: int = 2000
-    NUM_ATTEMPTS: int = 50
-    # snrs: np.array = undb(np.linspace(-75, -3, 50))
+    NUM_ATTEMPTS: int = 150
     # snrs: np.array = undb(np.linspace(-75, 0, 150))
-    # snrs: np.array = undb(np.linspace(-30, -3, 150))
-    snrs: np.array = undb(np.linspace(-25, -6, 5))
+    snrs: np.array = undb(np.linspace(-25, -6, 100))
     progress = tqdm(total=len(snrs) * len(harness))
     results: List[ModulationTestResults] = [
         __run(
@@ -353,8 +363,7 @@ if __name__ == "__main__":
         for modulation in harness
     ]
 
-    plot_youden_j_with_multiple_modulations(results, "MaxCut")
-    plot_youden_j_with_multiple_modulations(results, "DCS")
-    plot_youden_j_with_multiple_modulations(results, "Radiometer")
+    for d in _detectors():
+        plot_youden_j_with_multiple_modulations(results, d.name)
 
     plt.show()
