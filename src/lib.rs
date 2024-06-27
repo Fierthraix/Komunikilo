@@ -7,7 +7,6 @@ use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray2};
 use pyo3::prelude::*;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
-use smallvec::SmallVec;
 
 mod bch;
 pub mod bpf;
@@ -40,7 +39,8 @@ use crate::fh_ofdm_dcsk::tx_fh_ofdm_dcsk_signal_2;
 use crate::fsk::tx_bfsk_signal;
 use crate::hadamard::HadamardMatrix;
 use crate::iter::Iter;
-use crate::ofdm::tx_ofdm_qpsk_signal;
+use crate::ofdm::{rx_ofdm_qpsk_signal, tx_ofdm_qpsk_signal};
+use crate::qpsk::{rx_qpsk_signal, tx_qpsk_signal};
 use crate::ssca::{ssca_base, ssca_mapped};
 
 pub type Bit = bool;
@@ -87,6 +87,31 @@ fn u8s_to_bools<I: Iterator<Item = u8>>(bytes: I) -> impl Iterator<Item = bool> 
 
 fn is_int(num: f64) -> bool {
     num == (num as u64) as f64
+}
+
+trait IsNan {
+    fn is_nan(&self) -> bool;
+}
+
+impl IsNan for f64 {
+    fn is_nan(&self) -> bool {
+        *self == std::f64::NAN || *self == std::f64::INFINITY || *self == std::f64::NEG_INFINITY
+    }
+}
+
+impl IsNan for Complex<f64> {
+    fn is_nan(&self) -> bool {
+        self.re == std::f64::NAN
+            || self.im == std::f64::NAN
+            || self.re == std::f64::INFINITY
+            || self.im == std::f64::INFINITY
+            || self.re == std::f64::NEG_INFINITY
+            || self.im == std::f64::NEG_INFINITY
+    }
+}
+
+fn no_nans<T: IsNan>(v: &[T]) -> bool {
+    !v.iter().any(|v_i| v_i.is_nan())
 }
 
 #[inline]
@@ -429,6 +454,27 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
         rx_bpsk_signal(signal.into_iter(), sample_rate, symbol_rate, carrier_freq).collect()
     }
 
+    /// Transmit a QPSK signal.
+    #[pyfunction]
+    fn tx_qpsk(
+        message: Vec<Bit>,
+        sample_rate: usize,
+        symbol_rate: usize,
+        carrier_freq: f64,
+    ) -> Vec<f64> {
+        tx_qpsk_signal(message.into_iter(), sample_rate, symbol_rate, carrier_freq).collect()
+    }
+
+    #[pyfunction]
+    fn rx_qpsk(
+        signal: Vec<f64>,
+        sample_rate: usize,
+        symbol_rate: usize,
+        carrier_freq: f64,
+    ) -> Vec<Bit> {
+        rx_qpsk_signal(signal.into_iter(), sample_rate, symbol_rate, carrier_freq).collect()
+    }
+
     /// Transmit an OFDM QPSK signal.
     #[pyfunction]
     fn tx_ofdm(
@@ -441,6 +487,26 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     ) -> Vec<f64> {
         tx_ofdm_qpsk_signal(
             message.into_iter(),
+            subcarriers,
+            pilots,
+            sample_rate,
+            symbol_rate,
+            carrier_freq,
+        )
+        .collect()
+    }
+
+    #[pyfunction]
+    fn rx_ofdm(
+        signal: Vec<f64>,
+        subcarriers: usize,
+        pilots: usize,
+        sample_rate: usize,
+        symbol_rate: usize,
+        carrier_freq: f64,
+    ) -> Vec<bool> {
+        rx_ofdm_qpsk_signal(
+            signal.into_iter(),
             subcarriers,
             pilots,
             sample_rate,
@@ -543,8 +609,11 @@ fn module_with_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tx_baseband_bpsk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_bpsk, m)?)?;
     m.add_function(wrap_pyfunction!(rx_bpsk, m)?)?;
+    m.add_function(wrap_pyfunction!(tx_qpsk, m)?)?;
+    m.add_function(wrap_pyfunction!(rx_qpsk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_cdma_bpsk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_ofdm, m)?)?;
+    m.add_function(wrap_pyfunction!(rx_ofdm, m)?)?;
     m.add_function(wrap_pyfunction!(tx_csk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_dcsk, m)?)?;
     m.add_function(wrap_pyfunction!(tx_bfsk, m)?)?;

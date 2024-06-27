@@ -67,8 +67,7 @@ pub fn rx_baseband_ofdm_signal<I: Iterator<Item = Complex<f64>>>(
     let num_data_subcarriers = subcarriers - pilots;
     let cp_len = subcarriers / 4;
 
-    let data_subcarriers: Vec<usize> =
-        get_data_subcarriers(subcarriers, subcarriers - num_data_subcarriers);
+    let data_subcarriers: Vec<usize> = get_data_subcarriers(subcarriers, pilots);
 
     let mut fftp = FftPlanner::new();
 
