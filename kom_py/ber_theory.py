@@ -77,7 +77,7 @@ if __name__ == "__main__":
         eb = sum(s_i**2 for s_i in signal) / NUM_BITS
         n0s: np.array = np.nan_to_num(
             np.sqrt(SAMPLE_RATE * eb / (2 * snrs)) / SYMBOL_RATE
-        )  # perfect...
+        )
 
         bers = p.starmap(get_ber, [(data, signal, bpsk_signal_rx, n0) for n0 in n0s])
 
@@ -89,10 +89,10 @@ if __name__ == "__main__":
     with multiprocessing.Pool() as p, timeit("QPSK") as _:
         signal: List[float] = qpsk_signal(data)
         eb = sum(s_i**2 for s_i in signal) / NUM_BITS
-        n0s: np.array = np.nan_to_num(np.sqrt(SAMPLE_RATE * eb / (2 * snrs)) / SYMBOL_RATE)
-        bers = p.starmap(
-            get_ber, [(data, signal, qpsk_signal_rx, n0) for n0 in n0s]
+        n0s: np.array = np.nan_to_num(
+            np.sqrt(SAMPLE_RATE * eb / (2 * snrs)) / SYMBOL_RATE
         )
+        bers = p.starmap(get_ber, [(data, signal, qpsk_signal_rx, n0) for n0 in n0s])
 
         fig, ax = plt.subplots()
         ax.plot(snrs, bers)

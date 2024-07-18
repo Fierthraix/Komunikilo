@@ -13,7 +13,7 @@ if __name__ == "__main__":
     N = 4096
     Np = 64
 
-    num_iters = 150
+    num_iters = 1500
 
     datas: List[np.array] = [np.random.randn(N + Np) for _ in range(num_iters)]
 

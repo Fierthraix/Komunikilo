@@ -162,11 +162,11 @@ if __name__ == "__main__":
         plot_lambda(dc)
         import matplotlib.pyplot as plt
 
-        plt.show()
+        # plt.show()
 
     results = [do_signal(signal) for signal in signals]
     # with Pool(8) as p:
     #     results = p.map(do_signal, signals)
 
-    # import matplotlib.pyplot as plt
-    # plt.show()
+    import matplotlib.pyplot as plt
+    plt.show()
