@@ -9,7 +9,6 @@ pub fn tx_bfsk_signal<I: Iterator<Item = Bit>>(
     freq_high: f64,
 ) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
-    let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
     assert!(sample_rate / 2 >= freq_high as usize);
     assert!(is_int(sample_rate as f64 / symbol_rate as f64));
 
@@ -18,7 +17,7 @@ pub fn tx_bfsk_signal<I: Iterator<Item = Bit>>(
         .inflate(samples_per_symbol)
         .enumerate()
         .map(move |(idx, freq)| {
-            let time = idx as f64 * t_step;
+            let time = idx as f64 / sample_rate as f64;
             (2f64 * PI * freq * time).cos()
         })
 }
@@ -32,7 +31,6 @@ pub fn tx_mfsk_signal<I: Iterator<Item = Bit>>(
     _num_freqs: usize,
 ) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
-    let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
     assert!(sample_rate / 2 >= freq_high as usize);
     assert!(is_int(sample_rate as f64 / symbol_rate as f64));
     // TODO: FIXME: evenly divide the space by number of freqs,
@@ -42,7 +40,7 @@ pub fn tx_mfsk_signal<I: Iterator<Item = Bit>>(
         .inflate(samples_per_symbol)
         .enumerate()
         .map(move |(idx, freq)| {
-            let time = idx as f64 * t_step;
+            let time = idx as f64 / sample_rate as f64;
             (2f64 * PI * freq * time).cos()
         })
 }
@@ -54,7 +52,6 @@ pub fn tx_fsk_signal<I: Iterator<Item = Bit>>(
     freqs: &[f64],
 ) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
-    let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
     // TODO: FIXME: Read from list of freqs.
     let freq_high = freqs[0];
     let freq_low = freqs[1];
@@ -65,7 +62,7 @@ pub fn tx_fsk_signal<I: Iterator<Item = Bit>>(
         .inflate(samples_per_symbol)
         .enumerate()
         .map(move |(idx, freq)| {
-            let time = idx as f64 * t_step;
+            let time = idx as f64 / sample_rate as f64;
             (2f64 * PI * freq * time).cos()
         })
 }

@@ -103,7 +103,6 @@ pub fn tx_fh_bpsk_signal_old<I: Iterator<Item = Bit>>(
     carrier_freq: f64,
 ) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
-    let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
     assert!(sample_rate / 2 >= carrier_freq as usize);
     assert!(is_int(sample_rate as f64 / symbol_rate as f64));
     // TODO: assert to check hopped freqs are within range.
@@ -113,12 +112,12 @@ pub fn tx_fh_bpsk_signal_old<I: Iterator<Item = Bit>>(
         .zip(HopTable::new(low_freq, high_freq, num_freqs, SEED))
         .enumerate()
         .flat_map(move |(idx, (msg_val, hop_freq))| {
-            let time = (idx * samples_per_symbol) as f64 * t_step;
+            let time = idx as f64 / sample_rate as f64;
 
             // Generate symbol's worth of data:
             let symbol/*: Vec<f64>*/ = (0..samples_per_symbol)
                 .map(move |idx| {
-                    let time: f64 = time + t_step * idx as f64;
+                    let time = time + idx as f64 / sample_rate as f64;
                     let bpsk_val = msg_val * (2f64 * PI * carrier_freq * time).cos();
                     let freq_hop = (2f64 * PI * hop_freq * time).cos();
 

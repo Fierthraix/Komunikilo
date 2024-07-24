@@ -8,7 +8,6 @@ pub fn tx_fsk<I: Iterator<Item = Bit>>(
     carrier_freq: f64,
 ) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
-    let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
 
     let sep: f64 = 0.05 * carrier_freq;
 
@@ -17,7 +16,7 @@ pub fn tx_fsk<I: Iterator<Item = Bit>>(
         .inflate(samples_per_symbol)
         .enumerate()
         .map(move |(idx, sig)| {
-            let time = idx as f64 * t_step;
+            let time = idx as f64 / sample_rate as f64;
             (2_f64 * PI * (carrier_freq + sig * (sep / 2f64)) * time).cos()
         })
 }
@@ -29,20 +28,19 @@ pub fn rx_fsk<I: Iterator<Item = f64>>(
     carrier_freq: f64,
 ) -> impl Iterator<Item = Bit> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
-    let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
 
     let sep: f64 = 0.05 * carrier_freq;
     signal
         .chunks(samples_per_symbol)
         .enumerate()
         .map(move |(idx, chunk)| {
-            let time = idx as f64 * t_step * (samples_per_symbol as f64);
+            let time = idx as f64 / sample_rate as f64;
 
             let (s0, s1, s2, s3) = chunk
                 .iter()
                 .enumerate()
                 .map(|(jdx, &s_i)| {
-                    let t_i = time + (jdx as f64) * t_step;
+                    let t_i = time + jdx as f64 / sample_rate as f64;
                     [
                         s_i * (2f64 * PI * (carrier_freq + (sep / 2f64)) * t_i).cos(),
                         s_i * (2f64 * PI * (carrier_freq + (sep / 2f64)) * t_i).sin(),
@@ -67,14 +65,13 @@ pub fn tx_fm<I: Iterator<Item = f64>>(
 ) -> impl Iterator<Item = f64> {
     let k = 0.05;
     let samples_per_symbol: usize = sample_rate / symbol_rate;
-    let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
 
     signal
         .inflate(samples_per_symbol)
         .integrate()
         .enumerate()
         .map(move |(idx, msg_cumsum)| {
-            let time = idx as f64 * t_step;
+            let time = idx as f64 / sample_rate as f64;
             (2_f64 * PI * carrier_freq * time + k * msg_cumsum).cos()
         })
 }

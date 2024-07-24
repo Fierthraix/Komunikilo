@@ -27,7 +27,6 @@ pub fn tx_bpsk_signal<I: Iterator<Item = Bit>>(
     carrier_freq: f64,
 ) -> impl Iterator<Item = f64> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
-    let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
     assert!(sample_rate / 2 >= carrier_freq as usize);
     assert!(is_int(sample_rate as f64 / symbol_rate as f64));
 
@@ -36,7 +35,7 @@ pub fn tx_bpsk_signal<I: Iterator<Item = Bit>>(
         .inflate(samples_per_symbol)
         .enumerate()
         .map(move |(idx, msg_val)| {
-            let time = idx as f64 * t_step;
+            let time = idx as f64 / sample_rate as f64;
             msg_val * (2_f64 * PI * carrier_freq * time).cos()
         })
 }
@@ -48,11 +47,10 @@ pub fn rx_bpsk_signal<I: Iterator<Item = f64>>(
     carrier_freq: f64,
 ) -> impl Iterator<Item = Bit> {
     let samples_per_symbol: usize = sample_rate / symbol_rate;
-    let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
     message
         .enumerate()
         .map(move |(idx, sample)| {
-            let time = idx as f64 * t_step;
+            let time = idx as f64 / sample_rate as f64;
             sample * (2_f64 * PI * carrier_freq * time).cos()
         })
         .integrate_and_dump(samples_per_symbol)
@@ -90,7 +88,6 @@ mod tests {
         // Derived Parameters.
         let samples_per_symbol = samp_rate / symbol_rate;
         let _num_samples = num_bits * samples_per_symbol;
-        //let t_step: f64 = 1_f64 / (samples_per_symbol as f64);
 
         // Test proper.
         let mut rng = rand::thread_rng();
