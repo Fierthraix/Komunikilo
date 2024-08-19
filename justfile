@@ -26,17 +26,19 @@ install:
 	cargo install maturin
 	@just make
 
-interactive *kargs:
-	poetry run python3 -i {{ kargs }}
-
 plop arg:
 	poetry run python3 -m plop.collector {{ arg }}
 
 plop_view:
 	poetry run python3 -m plop.viewer --datadir="{{ justfile_directory() + '/kom_py/profiles' }}"
 
+[no-cd]
 shell *kargs:
 	poetry run python3 {{ kargs }}
+
+[no-cd]
+interactive *kargs:
+	poetry run python3 -i {{ kargs }}
 
 test:
     @just make
